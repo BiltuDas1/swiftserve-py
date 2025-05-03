@@ -1,0 +1,6 @@
+__pycache__/
+.vscode/
+temp/
+main.py
+*.pem
+*.sqlite3
