@@ -2,10 +2,12 @@ from django.shortcuts import render
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from environments import Env
 from .chain import Blockchain, Key, Block
+from .chain.ActionData import Node
 from .chain.exceptions import InvalidNextBlock, InconsistentTimeline, InconsistentHash, InvalidSignature, InconsistentBlockchainException
 from registry.Node.List import NodeList
 import math
 import random
+import httpx
 
 def collided_block(ip_address: str, port: int, chain: Blockchain.Blockchain) -> int:
   """
@@ -49,6 +51,16 @@ def collided_block(ip_address: str, port: int, chain: Blockchain.Blockchain) -> 
     return -1
   else:
     return low
+
+def send_block(ip_address: str, port: int, blk: Block.Block):
+  """
+  Send the Blockchain block to the specific IP Address
+  """
+  httpx.post(
+    url=f"http://{ip_address}:{port}/addBlock", 
+    headers={'Content-Type': 'application/octet-stream'}, 
+    content=blk.to_bytes()
+  )
 
 
 # Create your views here.
@@ -110,8 +122,33 @@ def add_block(response: HttpRequest):
     # Now retrying adding the new block to the blockchain
     try:
       chain.add(blk)
+
+      # Do respective operation
+      action_data = blk.to_blockdata().action_data
+      match blk.to_blockdata().action_type:
+        case "add_node":
+          if isinstance(action_data, Node.Node):
+            nodelist.add(action_data.nodeIP)
+          else:
+            raise TypeError('Invalid action_data')
+        case "remove_node":
+          if isinstance(action_data, Node.Node):
+            nodelist.remove(action_data.nodeIP)
+          else:
+            raise TypeError('Invalid action_data')
+      
+
+      # Telling random 4 or less nodes about the new block
+      if nodelist.size() > 4:
+        nodes = nodelist.random_picks(4)
+      else:
+        nodes = nodelist.random_picks(nodelist.size())
+
+      for nodeIP in nodes:
+        send_block(nodeIP, port, blk)
+      
     except Exception:
-      return HttpResponse("The new block is invalid", status=409) 
+      return HttpResponse("The new block is invalid", status=409)
 
   finally:
     return HttpResponse("", status=200)
