@@ -151,7 +151,7 @@ class Key:
 
       if not self.load_key(key_path):
         try:
-          url = f"http://{ip_address}:{port}/key.pem"
+          url = f"http://{ip_address}:{port}/key"
           response = httpx.get(url, timeout=5)
           response.raise_for_status()
 

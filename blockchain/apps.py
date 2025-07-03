@@ -6,8 +6,6 @@ from .chain import Key
 import os
 from .chain import Block, Blockchain
 from .chain.ActionData import Node
-from registry.Node.List import NodeList
-from registry.File.List import FileList
 
 class BlockchainConfig(AppConfig):
   default_auto_field = "django.db.models.BigAutoField"
@@ -59,6 +57,3 @@ class BlockchainConfig(AppConfig):
       raise ValueError("no private key loaded")
 
     Env.set("CHAIN", Blockchain.Blockchain(genesis_block))
-
-    Env.set("NODES", NodeList())
-    Env.set("FILES", FileList())
