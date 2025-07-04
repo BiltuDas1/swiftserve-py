@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from environments import Env
 from .chain import Blockchain, Key, Block
@@ -55,6 +54,10 @@ def collided_block(ip_address: str, port: int, chain: Blockchain.Blockchain) -> 
 def send_block(ip_address: str, port: int, blk: Block.Block):
   """
   Send the Blockchain block to the specific IP Address
+  Args:
+    ip_address: The IP address of the remote node
+    port: The port number of the remote node
+    blk: The Block object which refers to the Block
   """
   httpx.post(
     url=f"http://{ip_address}:{port}/addBlock", 

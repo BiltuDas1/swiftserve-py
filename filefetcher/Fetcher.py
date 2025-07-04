@@ -5,6 +5,7 @@ import os
 from environments import Env
 import hashlib
 from registry.File import List as FileList
+from registry.Node import List as NodeList
 from datetime import datetime
 from collections import deque
 
@@ -66,6 +67,30 @@ class Fetcher:
         # Delete the incomplete chunk (If exist)
         if os.path.exists(file_path):
           os.remove(file_path)
+
+      # Tell random 4 nodes about the new chunk
+      port: int = Env.get("PORT")
+      machine_ip: str = Env.get("IPADDRESS")
+      nodelist: NodeList.NodeList = Env.get("NODES")
+      if nodelist.size() > 4:
+        nodes = nodelist.random_picks(4)
+      else:
+        nodes = nodelist.random_picks(nodelist.size())
+
+      for ip in nodes:
+        httpx.post(
+          url=f"http://{ip}:{port}/response", 
+          data={
+            'filename': work.filename,
+            'chunk': work.chunk,
+            'total_chunks': work.total_chunks,
+            'start_byte': work.start_byte,
+            'end_byte': work.end_byte,
+            'sha1': work.sha1,
+            'ip_address': machine_ip,
+            'port': port
+          }
+        )
 
       # If the chunk is the last part of the file then combine all the chunks to one file
       if work.chunk == work.total_chunks:

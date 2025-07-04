@@ -10,7 +10,45 @@ import httpx
 from blockchain.chain import Block, Blockchain, Key
 from blockchain.chain.ActionData import File
 from blockchain.views import send_block
-from filefetcher import Fetcher, Worker
+
+def tell_about_chunk(file_details: FileInfo.FileInfo, filename: str, ip: str, port: int, machine_ip: str, chunk_num: int, start_byte: int, end_byte: int):
+  """
+  Function which tells other nodes about the specific chunk
+  Args:
+    file_details: The FileInfo Object of the file
+    filename: The name of the file
+    ip: The IP Address of the remote node
+    port: The port number of the remote node
+    machine_ip: The ip address of the current node
+    chunk_num: The number of the chunk
+    start_byte: The starting byte location of the chunk
+    end_byte: The ending byte location of the chunk
+  """
+  # Counting total chunks
+  total_chunks = (file_details.size // (4 * 1024 * 1024))
+  if (file_details.size % (4 * 1024 * 1024)) != 0:
+    total_chunks += 1
+
+  # Getting the sha1 hash of current chunk
+  file_path: str = os.path.join(Env.get("DOWNLOADS"), filename)
+  with open(file_path, 'rb') as f:
+    f.seek(start_byte)
+    sha1hash = hashlib.sha1(f.read(end_byte)).hexdigest()
+
+  # Telling other nodes about the chunk
+  httpx.post(
+    url=f"http://{ip}:{port}/response", 
+    data={
+      'filename': filename,
+      'chunk': chunk_num,
+      'total_chunks': total_chunks,
+      'start_byte': start_byte,
+      'end_byte': end_byte,
+      'sha1': sha1hash,
+      'ip_address': machine_ip,
+      'port': port
+    }
+  )
 
 
 def tell_other_nodes(filename: str, file_details: FileInfo.FileInfo, start_range: int, end_range: int):
@@ -46,31 +84,7 @@ def tell_other_nodes(filename: str, file_details: FileInfo.FileInfo, start_range
   # And telling them that the current node have downloadable chunks
   for nodeIP in picked_nodes:
     send_block(nodeIP, port, blk)
-
-    # Counting total chunks
-    total_chunks = (file_details.size // (4 * 1024 * 1024))
-    if (file_details.size % (4 * 1024 * 1024)) != 0:
-      total_chunks += 1
-
-    # Getting the sha1 hash of current chunk
-    file_path: str = os.path.join(Env.get("DOWNLOADS"), filename)
-    with open(file_path, 'rb') as f:
-      sha1hash = hashlib.sha1(f.read()).hexdigest()
-
-    # Telling other nodes about the chunk
-    httpx.post(
-      url=f"http://{nodeIP}:{port}/response", 
-      data={
-        'filename': filename,
-        'chunk': 1,
-        'total_chunks': total_chunks,
-        'start_byte': start_range,
-        'end_byte': end_range,
-        'sha1': sha1hash,
-        'ip_address': machine_ip,
-        'port': port
-      }
-    )
+    tell_about_chunk(file_details, filename, nodeIP, port, machine_ip, 1, start_range, end_range)
 
 # Create your views here.
 @csrf_exempt
