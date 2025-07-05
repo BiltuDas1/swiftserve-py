@@ -2,6 +2,7 @@ from django.http import HttpRequest, HttpResponseNotAllowed, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from . import Fetcher, Worker
 from environments import Env
+import os
 
 # Create your views here.
 @csrf_exempt
@@ -64,12 +65,16 @@ def file_response_handler(response: HttpRequest):
   if not port.isdigit():
     return JsonResponse({'status': False, 'reason': 'invalid `port` field'}, status=400)
 
-  # Add the download job into queue
-  fetcher: Fetcher.Fetcher = Env.get("FILE_DOWNLOADER")
   work = Worker.FileWorker(
     filename, int(chunk), int(total_chunks), int(start_byte), int(end_byte), sha1, ip_address, int(port)
   )
 
+  # Check if the chunk is already downloaded by the node
+  if os.path.exists(os.path.join(Env.get("DOWNLOADS"), f"{work.filename}.{chunk}.part")):
+    return JsonResponse({'status': False, 'reason': f'chunk {work.chunk} is already downloaded'})
+
+  # Add the download job into queue
+  fetcher: Fetcher.Fetcher = Env.get("FILE_DOWNLOADER")
   fetcher.add_work(work)
   if not fetcher.is_running():
     fetcher.start()

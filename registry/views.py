@@ -24,11 +24,6 @@ def tell_about_chunk(file_details: FileInfo.FileInfo, filename: str, ip: str, po
     start_byte: The starting byte location of the chunk
     end_byte: The ending byte location of the chunk
   """
-  # Counting total chunks
-  total_chunks = (file_details.size // (4 * 1024 * 1024))
-  if (file_details.size % (4 * 1024 * 1024)) != 0:
-    total_chunks += 1
-
   # Getting the sha1 hash of current chunk
   file_path: str = os.path.join(Env.get("DOWNLOADS"), filename)
   with open(file_path, 'rb') as f:
@@ -41,7 +36,7 @@ def tell_about_chunk(file_details: FileInfo.FileInfo, filename: str, ip: str, po
     data={
       'filename': filename,
       'chunk': chunk_num,
-      'total_chunks': total_chunks,
+      'total_chunks': file_details.total_chunks,
       'start_byte': start_byte,
       'end_byte': end_byte,
       'sha1': sha1hash,
@@ -110,10 +105,16 @@ def upload(response: HttpRequest):
     for chunk in uploaded_file.chunks():
       f.write(chunk)
       sha512.update(chunk)
+
+  total_chunks = (uploaded_file.size // (4 * 1024 * 1024))
+  if (uploaded_file.size % (4 * 1024 * 1024)) != 0:
+    total_chunks += 1
+
   file_details = FileInfo.FileInfo(
     sha512.hexdigest(), 
     uploaded_file.size, 
-    int(time.time())
+    int(time.time()),
+    total_chunks
   )
   filelist.add(uploaded_file.name, file_details)
 

@@ -8,3 +8,4 @@ class FileInfo:
   filehash: str
   size: int
   added_time: int
+  total_chunks: int
