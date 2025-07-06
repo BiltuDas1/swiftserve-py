@@ -2,6 +2,7 @@ from django.apps import AppConfig
 from environments import Env
 import os
 from .Fetcher import Fetcher
+from .Sender import Sender
 
 class FilefetcherConfig(AppConfig):
   default_auto_field = "django.db.models.BigAutoField"
@@ -13,3 +14,4 @@ class FilefetcherConfig(AppConfig):
     """
     Env.set("LOGFILE", os.path.join('error.log'))
     Env.set("FILE_DOWNLOADER", Fetcher())
+    Env.set("FILE_SENDER", Sender())

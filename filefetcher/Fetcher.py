@@ -21,7 +21,7 @@ class Fetcher:
     """
     Adding a new job to the worker list
     Args:
-      job: The FileWorker object representing the download job which needs to done
+      job: The FileWorker object representing the job which needs to done
     """
     self.__queue.append(job)
 
@@ -91,6 +91,22 @@ class Fetcher:
             'port': port
           }
         )
+
+      # Tell the sender of the chunk that the current node have downloaded the chunk
+      # So that the sender will tell the nodes when the other chunks will be available
+      httpx.post(
+        url=f"http://{work.ip_address}:{work.port}/webhook", 
+        data={
+          'filename': work.filename,
+          'chunk': work.chunk,
+          'total_chunks': work.total_chunks,
+          'start_byte': work.start_byte,
+          'end_byte': work.end_byte,
+          'sha1': work.sha1,
+          'ip_address': machine_ip,
+          'port': port
+        }
+      )
 
       # If the chunk is the last part of the file then combine all the chunks to one file
       if work.chunk == work.total_chunks:
