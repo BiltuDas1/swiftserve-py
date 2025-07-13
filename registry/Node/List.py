@@ -1,7 +1,6 @@
 import httpx
 from typing import List, Dict
 import random
-from collections import defaultdict
 
 
 class NodeList:
@@ -10,24 +9,26 @@ class NodeList:
   """
 
   def __init__(self):
-    self._list: List[str] = []
-    self._set: set[str] = set()
-    self._rand = random.Random()
+    self._ip_list: List[str] = []
+    self._ip_set: set[str] = set()
+    self._ports: dict[str, int] = {}
 
-  def add(self, ip_address: str) -> bool:
+  def add(self, ip_address: str, port: int) -> bool:
     """
     Adds a unique IP address to the list.
 
     Args:
       ip_address: The IP address to add.
+      port: The port number to add.
 
     Returns:
       bool: True if added successfully, False if it already exists.
     """
-    if ip_address in self._set:
+    if ip_address in self._ip_set:
       return False
-    self._set.add(ip_address)
-    self._list.append(ip_address)
+    self._ip_set.add(ip_address)
+    self._ip_list.append(ip_address)
+    self._ports[ip_address] = port
     return True
 
   def remove(self, ip_address: str) -> bool:
@@ -40,13 +41,14 @@ class NodeList:
     Returns:
       bool: True if removed, False if not found.
     """
-    if ip_address not in self._set:
+    if ip_address not in self._ip_set:
       return False
-    self._set.remove(ip_address)
-    self._list.remove(ip_address)
+    self._ip_set.remove(ip_address)
+    self._ip_list.remove(ip_address)
+    del self._ports[ip_address]
     return True
 
-  def random_picks(self, k: int) -> List[str]:
+  def random_picks(self, k: int) -> List[tuple[str, int]]:
     """
     Picks k random IP addresses from the list.
 
@@ -54,14 +56,31 @@ class NodeList:
       k: Number of IPs to pick.
 
     Returns:
-      List[str]: List of randomly picked IP addresses.
+      List[tuple[str, int]]: List of randomly picked IP addresses and their ports.
 
     Raises:
       ValueError: If k is larger than the list size.
     """
-    if k > len(self._list):
+    if k > len(self._ip_list):
       raise ValueError("Sample size exceeds list size")
-    return random.sample(self._list, k)
+    random_lst = random.sample(self._ip_list, k)
+    final: List[tuple[str, int]] = []
+    for ip in random_lst:
+      final.append((ip, self._ports[ip]))
+
+    return final
+
+  def exists(self, ip_address: str) -> bool:
+    """
+    Checks if the given IP Address exist into the list or not
+
+    Args:
+      ip_address: The IP Address to look for
+
+    Returns:
+      bool: Return True if exist, otherwise False
+    """
+    return ip_address in self._ip_set
 
   def size(self) -> int:
     """
@@ -70,7 +89,7 @@ class NodeList:
     Returns:
       int: Size of the node list.
     """
-    return len(self._list)
+    return len(self._ip_list)
 
   @staticmethod
   def get_hash(ip_address: str, port: int, block_number: int) -> str:
@@ -136,31 +155,33 @@ class NodeList:
     """
     url = f"http://{ip_address}:{port}/getBlockDatas"
     headers = {"Content-Type": "text/plain"}
-    response = httpx.post(url, content=str(start_block_num), headers=headers)
+    response = httpx.post(url, content=str(
+        start_block_num), headers=headers)
     return response.content
 
   @staticmethod
-  def most_matched_hash_nodes(nodes: List[str], port: int, block_num: int) -> List[str]:
+  def most_matched_hash_nodes(
+      nodes: List[tuple[str, int]], block_num: int
+  ) -> List[tuple[str, int]]:
     """
     Checks all nodes for a specific block's hash and returns the list of nodes
     that share the most common hash value.
 
     Args:
-      nodes: IP addresses of nodes.
-      port: Port number.
+      nodes: IP Address + ports of the nodes
       block_num: Block number to check.
 
     Returns:
-      List[str]: List of nodes with the most matched hash.
+      List[tuple[str, int]]: List of nodes with the most matched hash.
     """
-    hash_map: Dict[str, List[str]] = {}
+    hash_map: Dict[str, List[tuple[str, int]]] = {}
     most_common_hash = ""
     highest_count = 0
 
-    for ip in nodes:
+    for ip, port in nodes:
       try:
         hash_val = NodeList.get_hash(ip, port, block_num)
-        hash_map[hash_val].append(ip)
+        hash_map[hash_val].append((ip, port))
         if len(hash_map[hash_val]) > highest_count:
           most_common_hash = hash_val
           highest_count = len(hash_map[hash_val])

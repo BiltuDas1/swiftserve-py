@@ -1,4 +1,3 @@
-from collections import deque
 from . import Worker
 import os
 import httpx
@@ -7,10 +6,12 @@ from environments import Env
 import time
 import hashlib
 
+
 class Sender:
   """
   Class which is used for telling the clients that the chunk is ready to deliver
   """
+
   def __init__(self):
     self.__queue: set[Worker.FileWorker] = set()
     self.__job = Thread(target=self.__work)
@@ -34,7 +35,7 @@ class Sender:
         if next_chunk > work.total_chunks:
           self.__queue.remove(work)
           continue
-        
+
         downloads: str = Env.get("DOWNLOADS")
         filepath = os.path.join(downloads, work.filename)
         if not os.path.exists(filepath):
@@ -42,7 +43,7 @@ class Sender:
 
         # Calculating the start byte and the end byte
         start_byte = work.end_byte + 1
-        with open(filepath, 'rb') as f:
+        with open(filepath, "rb") as f:
           f.seek(start_byte)
           sha1 = hashlib.sha1(f.read(4194304)).hexdigest()
           end_byte = f.tell()
@@ -55,23 +56,22 @@ class Sender:
         machine_ip: str = Env.get("IPADDRESS")
         port: int = Env.get("PORT")
         httpx.post(
-          url = f"http://{work.ip_address}:{work.port}/response",
-          data={
-            'filename': work.filename,
-            'chunk': next_chunk,
-            'total_chunks': work.total_chunks,
-            'start_byte': start_byte,
-            'end_byte': end_byte,
-            'sha1': sha1,
-            'ip_address': machine_ip,
-            'port': port
-          }
+            url=f"http://{work.ip_address}:{work.port}/response",
+            data={
+                "filename": work.filename,
+                "chunk": next_chunk,
+                "total_chunks": work.total_chunks,
+                "start_byte": start_byte,
+                "end_byte": end_byte,
+                "sha1": sha1,
+                "ip_address": machine_ip,
+                "port": port,
+            },
         )
         self.__queue.remove(work)
         time.sleep(2)
 
       time.sleep(5)
-
 
   def start(self):
     """

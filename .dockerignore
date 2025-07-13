@@ -1,4 +1,4 @@
-__pycache__/
+**/__pycache__/
 .vscode/
 temp/
 main.py
@@ -8,3 +8,7 @@ downloads/
 *.log
 docker-compose.yml
 .env
+.dockerignore
+.git
+.gitignore
+Dockerfile

@@ -1,6 +1,7 @@
 # This file is used for storing variables which will be shared globally (Only inside the app)
 from typing import Any
 
+
 class Env:
   __items: dict[str, Any] = {}
 
@@ -33,7 +34,7 @@ class Env:
       KeyError: when there is no environment with that name
     """
     return cls.__items[name]
-  
+
   @classmethod
   def update(cls, name: str, value: Any) -> None:
     """

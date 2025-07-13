@@ -3,7 +3,16 @@ from io import BytesIO
 from .Block import Block
 from .BlockData import BlockData
 from . import Variables, Key
-from .exceptions import InconsistentHash, InvalidNextBlock, InconsistentTimeline, InvalidSignature
+from .exceptions import (
+    InconsistentHash,
+    InvalidNextBlock,
+    InconsistentTimeline,
+    InvalidSignature,
+)
+from .ActionData import Node
+from registry.Node.List import NodeList
+from environments import Env
+import httpx
 
 
 class Blockchain:
@@ -38,25 +47,54 @@ class Blockchain:
     data: BlockData = block.to_blockdata()
 
     if data.block_number != self.last_block_number() + 1:
-      raise InvalidNextBlock.InvalidNextBlock(f"blockNumber can only be {self.last_block_number() + 1}")
+      raise InvalidNextBlock.InvalidNextBlock(
+          f"blockNumber can only be {self.last_block_number() + 1}"
+      )
 
     if self.__blocks[-1].to_blockdata().creation_time > data.creation_time:
-      raise InconsistentTimeline.InconsistentTimeline("new block can't be created before the top of the block")
+      raise InconsistentTimeline.InconsistentTimeline(
+          "new block can't be created before the top of the block"
+      )
 
     if self.__blocks[-1].get_hash() != data.previous_block_hash:
-      raise InconsistentHash.InconsistentHash("previousBlockHash does not match top of the chain")
+      raise InconsistentHash.InconsistentHash(
+          "previousBlockHash does not match top of the chain"
+      )
 
     key = Key.Key()
-    key.get_key(data.creator_ip, 80) # Get Public Key
+    key.get_key(data.creator_ip, data.creator_port)  # Get Public Key
 
     # If key not found, then reject the block
     if (kpub := key.get_public_key_raw()) is not None:
       if not block.verify_signature(kpub):
-        raise InvalidSignature.InvalidSignature("block signature verification failed")
+        raise InvalidSignature.InvalidSignature(
+            "block signature verification failed"
+        )
     else:
       raise FileExistsError("key doesn't exist")
 
     self.__blocks.append(block)
+
+    # Perform operation according to the action_type
+    nodelist: NodeList = Env.get("NODES")
+    match data.action_type:
+      case "add_node":
+        if isinstance(data.action_data, Node.Node):
+          if nodelist.add(data.action_data.nodeIP, data.action_data.port):
+            # Sending the whole blockchain data to the new node
+            blocks_data = self.get_blocks_data(0)
+            httpx.post(
+                url=f"http://{data.action_data.nodeIP}:{data.action_data.port}/overwriteBlockchain",
+                content=blocks_data,
+                headers={"Content-Type": "application/octet-stream"}
+            )
+        else:
+          raise TypeError("Invalid action_data")
+      case "remove_node":
+        if isinstance(data.action_data, Node.Node):
+          nodelist.remove(data.action_data.nodeIP)
+        else:
+          raise TypeError("Invalid action_data")
 
   def last_block_number(self) -> int:
     """
@@ -104,13 +142,13 @@ class Blockchain:
     Returns:
       bytes: Serialized byte stream of blocks.
     """
-    baos = BytesIO()
+    baos = bytearray()
 
     for i in range(start_block_num, self.last_block_number() + 1):
       blk = self.__blocks[i]
-      baos.write(blk.to_bytes())
+      baos.extend(blk.to_bytes())
 
-    return baos.getvalue()
+    return bytes(baos)
 
   def load_blocks_data(self, data: bytes, start_block_num: int) -> None:
     """
@@ -124,13 +162,16 @@ class Blockchain:
     for _ in range(self.last_block_number(), start_block_num - 1, -1):
       self.__blocks.pop()
 
-    buffer = BytesIO()
+    buffer = bytearray()
     for b in data:
-      buffer.write(bytes([b]))
-    if b == Variables.EOF:
-      blk = Block.from_bytes(buffer.getvalue())
-      self.add(blk)
-      buffer = BytesIO()
+      buffer.append(b)
+      if b == Variables.EOF[0]:
+        blk = Block.from_bytes(buffer)
+        if self.size() == 0:
+          self.add_genesis(blk)
+        else:
+          self.add(blk)
+        buffer = bytearray()
 
   def get_block_hash(self, position: int) -> str:
     """
@@ -144,3 +185,25 @@ class Blockchain:
     """
     return self.__blocks[position].get_hash()
 
+  def add_genesis(self, genesis_block: Block) -> bool:
+    """
+    Add the genesis block to the blockchain (Only when the blockchain doesn't have any genesis block)
+    Args:
+      genesis_block: The genesis block of the blockchain
+    Returns:
+      bool: True if adding genesis block is successful, otherwise False
+    """
+    if self.size() != 0:
+      return False
+
+    nodelist: NodeList = Env.get("NODES")
+    data = genesis_block.to_blockdata()
+    match data.action_type:
+      case "add_node":
+        if isinstance(data.action_data, Node.Node):
+          nodelist.add(data.action_data.nodeIP, data.action_data.port)
+      case _:
+        return False
+
+    self.__blocks.append(genesis_block)
+    return True

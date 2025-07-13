@@ -9,10 +9,12 @@ from registry.Node import List as NodeList
 from datetime import datetime
 from collections import deque
 
+
 class Fetcher:
   """
   Class refers to the download manager which will download chunks, in multi thread environment
   """
+
   def __init__(self):
     self.__queue: deque[Worker.FileWorker] = deque()
     self.__job = Thread(target=self.__work)
@@ -31,9 +33,11 @@ class Fetcher:
     """
     while len(self.__queue) != 0:
       work = self.__queue.popleft()
-      file_path: str = os.path.join(Env.get("DOWNLOADS"), f"{work.filename}.{work.chunk}.part")
-      
-      # Fetching how much downloaded the current file      
+      file_path: str = os.path.join(
+          Env.get("DOWNLOADS"), f"{work.filename}.{work.chunk}.part"
+      )
+
+      # Fetching how much downloaded the current file
       downloaded = 0
       if os.path.exists(file_path):
         downloaded = os.path.getsize(file_path)
@@ -42,9 +46,10 @@ class Fetcher:
       for _ in range(3):
         with httpx.Client() as client:
           response = client.get(
-            url = f"http://{work.ip_address}:{work.port}/download",
-            params = {'file': work.filename},
-            headers={'Range': f'bytes={work.start_byte}-{work.end_byte}'}
+              url=f"http://{work.ip_address}:{work.port}/download",
+              params={"file": work.filename},
+              headers={
+                  "Range": f"bytes={work.start_byte}-{work.end_byte}"},
           )
 
           if response.status_code in (200, 206):
@@ -52,7 +57,7 @@ class Fetcher:
             with open(file_path, mode) as f:
               f.write(response.content)
 
-          with open(file_path, 'rb') as f:
+          with open(file_path, "rb") as f:
             sha1 = hashlib.sha1(f.read()).hexdigest()
 
           # If the file chunk is valid
@@ -60,9 +65,13 @@ class Fetcher:
             break
       else:
         print(f"invalid file chunk: {file_path}")
-        destination_path: str = os.path.join(Env.get("DOWNLOADS"), work.filename)
-        with open(Env.get("LOGFILE"), 'a') as f:
-          f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] failed to download `{work.filename}.{work.chunk}.part` of `{destination_path}`")
+        destination_path: str = os.path.join(
+            Env.get("DOWNLOADS"), work.filename
+        )
+        with open(Env.get("LOGFILE"), "a") as f:
+          f.write(
+              f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] failed to download `{work.filename}.{work.chunk}.part` of `{destination_path}`"
+          )
 
         # Delete the incomplete chunk (If exist)
         if os.path.exists(file_path):
@@ -77,64 +86,70 @@ class Fetcher:
       else:
         nodes = nodelist.random_picks(nodelist.size())
 
-      for ip in nodes:
+      for ipAddress, portNum in nodes:
         httpx.post(
-          url=f"http://{ip}:{port}/response", 
-          data={
-            'filename': work.filename,
-            'chunk': work.chunk,
-            'total_chunks': work.total_chunks,
-            'start_byte': work.start_byte,
-            'end_byte': work.end_byte,
-            'sha1': work.sha1,
-            'ip_address': machine_ip,
-            'port': port
-          }
+            url=f"http://{ipAddress}:{portNum}/response",
+            data={
+                "filename": work.filename,
+                "chunk": work.chunk,
+                "total_chunks": work.total_chunks,
+                "start_byte": work.start_byte,
+                "end_byte": work.end_byte,
+                "sha1": work.sha1,
+                "ip_address": machine_ip,
+                "port": port,
+            },
         )
 
       # Tell the sender of the chunk that the current node have downloaded the chunk
       # So that the sender will tell the nodes when the other chunks will be available
       httpx.post(
-        url=f"http://{work.ip_address}:{work.port}/webhook", 
-        data={
-          'filename': work.filename,
-          'chunk': work.chunk,
-          'total_chunks': work.total_chunks,
-          'start_byte': work.start_byte,
-          'end_byte': work.end_byte,
-          'sha1': work.sha1,
-          'ip_address': machine_ip,
-          'port': port
-        }
+          url=f"http://{work.ip_address}:{work.port}/webhook",
+          data={
+              "filename": work.filename,
+              "chunk": work.chunk,
+              "total_chunks": work.total_chunks,
+              "start_byte": work.start_byte,
+              "end_byte": work.end_byte,
+              "sha1": work.sha1,
+              "ip_address": machine_ip,
+              "port": port,
+          },
       )
 
       # If the chunk is the last part of the file then combine all the chunks to one file
       if work.chunk == work.total_chunks:
-          destination_path: str = os.path.join(Env.get("DOWNLOADS"), work.filename)
-          sha512 = hashlib.sha512()
-          corrupted_chunks = False
+        destination_path: str = os.path.join(
+            Env.get("DOWNLOADS"), work.filename
+        )
+        sha512 = hashlib.sha512()
+        corrupted_chunks = False
 
-          for chunk in range(1, work.chunk + 1):
-            try:
-              file_path: str = os.path.join(Env.get("DOWNLOADS"), f"{work.filename}.{chunk}.part")
-              with open(file_path, 'rb') as f:
-                data = f.read()
-                sha512.update(data)
+        for chunk in range(1, work.chunk + 1):
+          try:
+            file_path: str = os.path.join(
+                Env.get(
+                    "DOWNLOADS"), f"{work.filename}.{chunk}.part"
+            )
+            with open(file_path, "rb") as f:
+              data = f.read()
+              sha512.update(data)
 
-              with open(destination_path, 'ab') as f:
-                f.write(data)
+            with open(destination_path, "ab") as f:
+              f.write(data)
 
-              os.remove(file_path) # Delete the chunk
-            except OSError:
-              corrupted_chunks = True
-              break
+            os.remove(file_path)  # Delete the chunk
+          except OSError:
+            corrupted_chunks = True
+            break
 
-          # Verifying the file hash
-          if not corrupted_chunks:
-            filelist: FileList.FileList = Env.get("FILES")
-            fileinfo = filelist.get(work.filename)
-            if sha512.hexdigest() != fileinfo.filehash:
-              os.remove(destination_path) # Invalid File, so delete it
+        # Verifying the file hash
+        if not corrupted_chunks:
+          filelist: FileList.FileList = Env.get("FILES")
+          fileinfo = filelist.get(work.filename)
+          if sha512.hexdigest() != fileinfo.filehash:
+            # Invalid File, so delete it
+            os.remove(destination_path)
 
   def start(self):
     """

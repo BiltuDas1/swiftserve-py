@@ -5,7 +5,7 @@ import base64
 from dataclasses import asdict
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
-    Ed25519PublicKey
+    Ed25519PublicKey,
 )
 from cryptography.exceptions import InvalidSignature
 from . import BlockData, Variables
@@ -17,7 +17,16 @@ class Block:
   Represents a block in the blockchain
   """
 
-  def __init__(self, block_number: int, previous_block_hash: str, action_type: str, action_data: ActionData, creator_ip: str, key: Ed25519PrivateKey):
+  def __init__(
+      self,
+      block_number: int,
+      previous_block_hash: str,
+      action_type: str,
+      action_data: ActionData,
+      creator_ip: str,
+      creator_port: int,
+      key: Ed25519PrivateKey,
+  ):
     """
     Initializes a new block either from data or from a byte stream.
 
@@ -27,13 +36,15 @@ class Block:
       action_type: Type of action this block represents (e.g., 'add_file', 'add_node').
       action_data: The associated data for the action.
       creator_ip: IP address of the block creator.
+      creator_port: port of the block creator.
       key: Private key used to sign the block.
 
     Raises:
       ValueError: If action_data is not of allowed types.
     """
     if not isinstance(action_data, (File.File, Node.Node)):
-        raise ValueError(f"Invalid type for action_data: {type(action_data)}")
+      raise ValueError(
+          f"Invalid type for action_data: {type(action_data)}")
 
     self.__data: BlockData.BlockData = BlockData.BlockData(
         block_number=block_number,
@@ -41,7 +52,8 @@ class Block:
         creation_time=int(time.time()),
         action_type=action_type,
         action_data=action_data,
-        creator_ip=creator_ip
+        creator_ip=creator_ip,
+        creator_port=creator_port
     )
 
     self.__json: str = json.dumps(asdict(self.__data))
@@ -56,7 +68,7 @@ class Block:
     Returns:
       str: Hexadecimal string of the hash.
     """
-    return hashlib.sha256(self.__json.encode('utf-8')).hexdigest()
+    return hashlib.sha256(self.__json.encode("utf-8")).hexdigest()
 
   def __sign(self, key: Ed25519PrivateKey) -> bytes:
     """
@@ -68,7 +80,7 @@ class Block:
     Returns:
       bytes: Raw byte signature of the block.
     """
-    return key.sign(self.__json.encode('utf-8'))
+    return key.sign(self.__json.encode("utf-8"))
 
   def get_hash(self) -> str:
     """
@@ -89,7 +101,7 @@ class Block:
     return base64.b64encode(self.__signature).decode()
 
   def get_signature_bytes(self) -> bytes:
-    """     
+    """
     Returns the raw byte signature.
 
     Returns:
@@ -108,7 +120,7 @@ class Block:
       bool: True if signature is valid, False otherwise.
     """
     try:
-      pub_key.verify(self.__signature, self.__json.encode('utf-8'))
+      pub_key.verify(self.__signature, self.__json.encode("utf-8"))
       return True
     except InvalidSignature:
       return False
@@ -146,12 +158,14 @@ class Block:
 
     # Serialize data
     result.extend(Variables.START)
-    result.extend(base64.b64encode(json.dumps(self.__data.to_dict()).encode('utf-8')))
+    result.extend(
+        base64.b64encode(json.dumps(self.__data.to_dict()).encode("utf-8"))
+    )
     result.extend(Variables.END)
 
     # Serialize hash
     result.extend(Variables.START)
-    result.extend(base64.b64encode(self.__hash.encode('utf-8')))
+    result.extend(base64.b64encode(self.__hash.encode("utf-8")))
     result.extend(Variables.END)
 
     # Serialize signature
@@ -163,7 +177,13 @@ class Block:
     return bytes(result)
 
   @classmethod
-  def __load_block(cls, block_data: BlockData.BlockData, hashstr: str, signature: bytes, bytes_data: bytes) -> 'Block':
+  def __load_block(
+      cls,
+      block_data: BlockData.BlockData,
+      hashstr: str,
+      signature: bytes,
+      bytes_data: bytes,
+  ) -> "Block":
     """
     Helper method allows to load data to a class using BlockData, Signature, Hash
 
@@ -182,7 +202,7 @@ class Block:
     return instance
 
   @classmethod
-  def from_bytes(cls, data: bytes) -> 'Block':
+  def from_bytes(cls, data: bytes) -> "Block":
     """
     Parses a byte stream and reconstructs the block's components:
     data, hash, and signature.
@@ -215,7 +235,8 @@ class Block:
       raise ValueError("Malformed byte structure")
 
     # Deserialize block data (JSON)
-    block_data_dict = json.loads(base64.b64decode(blocks[0]).decode("utf-8"))
+    block_data_dict = json.loads(
+        base64.b64decode(blocks[0]).decode("utf-8"))
 
     # Determine which ActionData type to use
     action_type = block_data_dict["action_type"]
@@ -230,12 +251,13 @@ class Block:
 
     # Create BlockData
     block_data = BlockData.BlockData(
-      block_number=block_data_dict["block_number"],
-      previous_block_hash=block_data_dict["previous_block_hash"],
-      creation_time=block_data_dict["creation_time"],
-      action_type=action_type,
-      action_data=action_data,
-      creator_ip=block_data_dict["creator_ip"]
+        block_number=block_data_dict["block_number"],
+        previous_block_hash=block_data_dict["previous_block_hash"],
+        creation_time=block_data_dict["creation_time"],
+        action_type=action_type,
+        action_data=action_data,
+        creator_ip=block_data_dict["creator_ip"],
+        creator_port=block_data_dict["creator_port"]
     )
 
     # Get hash and signature

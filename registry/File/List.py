@@ -1,9 +1,11 @@
 from . import FileInfo
 
+
 class FileList:
   """
   FileList keep the details of the files
   """
+
   def __init__(self):
     self.__list: dict[str, FileInfo.FileInfo] = {}
 
@@ -32,13 +34,13 @@ class FileList:
       return self.__list[filename]
     else:
       raise KeyError(f"the filename `{filename}` doesn't exist")
-    
+
   def exist(self, filename: str):
     """
     Check if the filename exist into the list
     Args:
       filename: The name of the file
-    
+
     Returns:
       bool: Returns True if filename exist, otherwise False
     """
