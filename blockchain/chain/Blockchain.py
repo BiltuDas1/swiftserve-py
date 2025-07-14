@@ -80,7 +80,8 @@ class Blockchain:
     match data.action_type:
       case "add_node":
         if isinstance(data.action_data, Node.Node):
-          if nodelist.add(data.action_data.nodeIP, data.action_data.port):
+          machine_ip: str = Env.get("IPADDRESS")
+          if machine_ip != data.action_data.nodeIP and nodelist.add(data.action_data.nodeIP, data.action_data.port):
             # Sending the whole blockchain data to the new node
             blocks_data = self.get_blocks_data(0)
             httpx.post(

@@ -104,10 +104,11 @@ def add_block(response: HttpRequest):
   nodelist: NodeList = Env.get("NODES")
   creator_ip = blk.to_blockdata().creator_ip
   machine_ip = Env.get("IPADDRESS")
-  if (not nodelist.exists(creator_ip)) and creator_ip != machine_ip:
-    logging.critical(nodelist.random_picks(nodelist.size()))
-    logging.critical(f"blocked /addBlock response from: {get_client_ip(response)}")
-    return JsonResponse({'status': False, 'reason': "client unauthorized"}, status=401)
+  if (not nodelist.exists(creator_ip)):
+    if creator_ip != machine_ip:
+      logging.critical(nodelist.random_picks(nodelist.size()))
+      logging.critical(f"blocked /addBlock response from: {get_client_ip(response)}")
+      return JsonResponse({'status': False, 'reason': "client unauthorized"}, status=401)
 
   chain: Blockchain.Blockchain = Env.get("CHAIN")
 
