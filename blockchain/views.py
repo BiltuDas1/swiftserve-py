@@ -173,7 +173,8 @@ def add_block(response: HttpRequest):
       return JsonResponse({'status': False, 'reason': "The new block is invalid"}, status=409)
 
   finally:
-
+    chain_path: str = Env.get("CHAINDATA")
+    chain.save(chain_path)
     # Telling random 4 or less nodes about the new block
     if nodelist.size() > 4:
       nodes = nodelist.random_picks(4)

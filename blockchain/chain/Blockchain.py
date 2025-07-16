@@ -13,6 +13,7 @@ from .ActionData import Node
 from registry.Node.List import NodeList
 from environments import Env
 import httpx
+import os
 
 
 class Blockchain:
@@ -114,6 +115,33 @@ class Blockchain:
       int: Total block count.
     """
     return len(self.__blocks)
+
+  def save(self, filepath: str):
+    """
+    Saves the blockchain data into file
+    Args:
+      filepath: The path where the data will be stored
+    """
+    data = self.get_blocks_data(0)
+
+    with open(filepath, 'wb') as f:
+      f.write(data)
+
+  def load(self, filepath: str):
+    """
+    Loads the blockchain data from file
+    Args:
+      filepath: The path where the blockchian data is stored
+    Raises:
+      ValueError: when the file doesn't contains valid blockchain data
+      FileNotFoundError: When the file doesn't exist
+    """
+    if not os.path.exists(filepath):
+      raise FileNotFoundError()
+
+    with open(filepath, 'rb') as f:
+      data: bytes = f.read()
+      self.load_blocks_data(data, 0)
 
   def last_block_hash(self) -> str:
     """

@@ -78,6 +78,17 @@ class BlockchainConfig(AppConfig):
 
     Env.set("CHAIN", Blockchain.Blockchain(genesis_block))
 
+    chain_dir = os.path.join(downloads, "chaindata")
+    os.makedirs(chain_dir, exist_ok=True)
+    chain_file = os.path.join(chain_dir, "blockchain.bin")
+    Env.set("CHAINDATA", chain_file)
+
+    chain: Blockchain.Blockchain = Env.get("CHAIN")
+    try:
+      chain.load(chain_file)
+    except FileNotFoundError:
+      pass
+
     # Adding current node IP into the node list
     # nodelist: NodeList = Env.get("NODES")
     # nodelist.add(currentNodeIP, port)
