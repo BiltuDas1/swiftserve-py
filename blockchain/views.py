@@ -264,6 +264,8 @@ def overwrite_blockchain(response: HttpRequest):
   chain: Blockchain.Blockchain = Env.get("CHAIN")
   if chain.size() <= 1:
     chain.load_blocks_data(response.body, 0)
+    chain_path: str = Env.get("CHAINDATA")
+    chain.save(chain_path)
     return JsonResponse({'status': True, 'reason': ''}, status=200)
   else:
     return JsonResponse({'status': False, 'reason': 'blockchain is not empty'})
