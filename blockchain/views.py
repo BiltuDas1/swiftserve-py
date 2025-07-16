@@ -79,11 +79,14 @@ def send_block(ip_address: str, port: int, blk: Block.Block):
     port: The port number of the remote node
     blk: The Block object which refers to the Block
   """
-  httpx.post(
-      url=f"http://{ip_address}:{port}/addBlock",
-      headers={"Content-Type": "application/octet-stream"},
-      content=blk.to_bytes(),
-  )
+  try:
+    httpx.post(
+        url=f"http://{ip_address}:{port}/addBlock",
+        headers={"Content-Type": "application/octet-stream"},
+        content=blk.to_bytes(),
+    )
+  except httpx.ReadTimeout:
+    pass
 
 
 # Create your views here.
