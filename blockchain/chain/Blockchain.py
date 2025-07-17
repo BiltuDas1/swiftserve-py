@@ -98,6 +98,9 @@ class Blockchain:
         else:
           raise TypeError("Invalid action_data")
 
+      case "add_file":
+        pass
+
   def last_block_number(self) -> int:
     """
     Returns the block number of the last block in the blockchain.

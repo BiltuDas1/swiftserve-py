@@ -25,3 +25,9 @@ class RegistryConfig(AppConfig):
       os.makedirs(downloads, exist_ok=True)
 
     Env.set("DOWNLOADS", downloads)
+    chain_dir = os.path.join(downloads, "chaindata")
+    filelist = os.path.join(chain_dir, 'filelist.bin')
+    Env.set("FILELIST_PATH", filelist)
+
+    nodelist = os.path.join(chain_dir, 'nodelist.bin')
+    Env.set("NODELIST_PATH", nodelist)

@@ -70,7 +70,7 @@ class Fetcher:
         )
         with open(Env.get("LOGFILE"), "a") as f:
           f.write(
-              f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] failed to download `{work.filename}.{work.chunk}.part` of `{destination_path}`"
+              f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] failed to download `{work.filename}.{work.chunk}.part` of `{destination_path}`\n"
           )
 
         # Delete the incomplete chunk (If exist)

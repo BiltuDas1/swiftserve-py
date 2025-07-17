@@ -110,7 +110,7 @@ def upload(response: HttpRequest):
   uploaded_file = response.FILES["file"]
 
   filelist: FileList.FileList = Env.get("FILES")
-  if filelist.exist(uploaded_file.name) is not None:
+  if filelist.exist(uploaded_file.name):
     return JsonResponse(
         {
             "status": False,
@@ -134,6 +134,8 @@ def upload(response: HttpRequest):
       sha512.hexdigest(), uploaded_file.size, int(time.time()), total_chunks
   )
   filelist.add(uploaded_file.name, file_details)
+  filepath: str = Env.get("FILELIST_PATH")
+  filelist.save(filepath)
 
   # Sending 4MiB chunk
   if uploaded_file.size > (4 * 1024 * 1024):

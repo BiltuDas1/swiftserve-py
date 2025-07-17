@@ -28,6 +28,8 @@ class Sender:
     """
     Method refers to the job which will be done by the Sender
     """
+    downloads: str = Env.get("DOWNLOADS")
+
     while len(self.__queue) != 0:
       for work in self.__queue.copy():
         # Check if the chunk is available
@@ -36,7 +38,6 @@ class Sender:
           self.__queue.remove(work)
           continue
 
-        downloads: str = Env.get("DOWNLOADS")
         filepath = os.path.join(downloads, work.filename)
         if not os.path.exists(filepath):
           continue
