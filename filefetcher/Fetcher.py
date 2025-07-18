@@ -45,12 +45,15 @@ class Fetcher:
       # Downloading the file (If failed then retry 3 times)
       for _ in range(3):
         with httpx.Client() as client:
-          response = client.get(
-              url=f"http://{work.ip_address}:{work.port}/download",
-              params={"file": work.filename},
-              headers={
-                  "Range": f"bytes={work.start_byte}-{work.end_byte}"},
-          )
+          try:
+            response = client.get(
+                url=f"http://{work.ip_address}:{work.port}/download",
+                params={"file": work.filename},
+                headers={
+                    "Range": f"bytes={work.start_byte}-{work.end_byte}"},
+            )
+          except Exception:
+            continue
 
           if response.status_code in (200, 206):
             mode = "ab" if downloaded > 0 else "wb"
@@ -87,8 +90,28 @@ class Fetcher:
         nodes = nodelist.random_picks(nodelist.size())
 
       for ipAddress, portNum in nodes:
+        try:
+          httpx.post(
+              url=f"http://{ipAddress}:{portNum}/response",
+              data={
+                  "filename": work.filename,
+                  "chunk": work.chunk,
+                  "total_chunks": work.total_chunks,
+                  "start_byte": work.start_byte,
+                  "end_byte": work.end_byte,
+                  "sha1": work.sha1,
+                  "ip_address": machine_ip,
+                  "port": port,
+              },
+          )
+        except Exception:
+          continue
+
+      # Tell the sender of the chunk that the current node have downloaded the chunk
+      # So that the sender will tell the nodes when the other chunks will be available
+      try:
         httpx.post(
-            url=f"http://{ipAddress}:{portNum}/response",
+            url=f"http://{work.ip_address}:{work.port}/webhook",
             data={
                 "filename": work.filename,
                 "chunk": work.chunk,
@@ -100,22 +123,8 @@ class Fetcher:
                 "port": port,
             },
         )
-
-      # Tell the sender of the chunk that the current node have downloaded the chunk
-      # So that the sender will tell the nodes when the other chunks will be available
-      httpx.post(
-          url=f"http://{work.ip_address}:{work.port}/webhook",
-          data={
-              "filename": work.filename,
-              "chunk": work.chunk,
-              "total_chunks": work.total_chunks,
-              "start_byte": work.start_byte,
-              "end_byte": work.end_byte,
-              "sha1": work.sha1,
-              "ip_address": machine_ip,
-              "port": port,
-          },
-      )
+      except Exception:
+        pass
 
       # If the chunk is the last part of the file then combine all the chunks to one file
       if work.chunk == work.total_chunks:

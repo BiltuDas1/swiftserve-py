@@ -56,19 +56,22 @@ class Sender:
         # Telling the client that the chunk is available
         machine_ip: str = Env.get("IPADDRESS")
         port: int = Env.get("PORT")
-        httpx.post(
-            url=f"http://{work.ip_address}:{work.port}/response",
-            data={
-                "filename": work.filename,
-                "chunk": next_chunk,
-                "total_chunks": work.total_chunks,
-                "start_byte": start_byte,
-                "end_byte": end_byte,
-                "sha1": sha1,
-                "ip_address": machine_ip,
-                "port": port,
-            },
-        )
+        try:
+          httpx.post(
+              url=f"http://{work.ip_address}:{work.port}/response",
+              data={
+                  "filename": work.filename,
+                  "chunk": next_chunk,
+                  "total_chunks": work.total_chunks,
+                  "start_byte": start_byte,
+                  "end_byte": end_byte,
+                  "sha1": sha1,
+                  "ip_address": machine_ip,
+                  "port": port,
+              },
+          )
+        except Exception:
+          pass
         self.__queue.remove(work)
         time.sleep(2)
 
