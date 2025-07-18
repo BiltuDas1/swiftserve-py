@@ -26,6 +26,8 @@ class FileList:
     
     if downloaded:
       self.__list[filename] = (fileinfo, fileinfo.total_chunks)
+    else:
+      self.__list[filename] = (fileinfo, 0)
 
   def remove(self, filename: str):
     """
