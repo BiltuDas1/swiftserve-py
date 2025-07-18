@@ -11,19 +11,19 @@ class FileList:
   def __init__(self):
     self.__list: dict[str, tuple[FileInfo.FileInfo, int]] = {}
 
-  def add(self, filename: str, fileinfo: FileInfo.FileInfo, downloaded=True):
+  def add(self, filename: str, fileinfo: FileInfo.FileInfo, downloaded=False):
     """
     Adds the file and their information
     Args:
       filename: The name of the file
       fileinfo: The file information
-      downloaded: Set it True if the whole file is downloaded, otherwise False
+      downloaded: Set it True if the whole file is downloaded, otherwise False (Default False)
     Raises:
       KeyError: If the filename already exist into the system
     """
     if filename in self.__list:
       raise KeyError("The filename already exist")
-    
+
     if downloaded:
       self.__list[filename] = (fileinfo, fileinfo.total_chunks)
     else:
@@ -109,4 +109,3 @@ class FileList:
       return True
     else:
       return False
-    

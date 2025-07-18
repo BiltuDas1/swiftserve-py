@@ -18,6 +18,7 @@ import httpx
 import os
 import time
 
+
 class Blockchain:
   """
   Blockchain refers to a list of blocks which allows secure addition, validation,
@@ -109,11 +110,11 @@ class Blockchain:
             total_chunks += 1
           if not filelist.exist(f.filename):
             filelist.add(f.filename, FileInfo(
-              f.filehash, f.filesize, int(time.time()), total_chunks
+                f.filehash, f.filesize, int(time.time()), total_chunks
             ))
         else:
           raise TypeError("Invalid action_data")
-        
+
       case "remove_file":
         if isinstance(data.action_data, File.File):
           f = data.action_data

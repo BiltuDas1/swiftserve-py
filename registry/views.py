@@ -140,7 +140,7 @@ def upload(response: HttpRequest):
   file_details = FileInfo.FileInfo(
       sha512.hexdigest(), uploaded_file.size, int(time.time()), total_chunks
   )
-  filelist.add(uploaded_file.name, file_details)
+  filelist.add(uploaded_file.name, file_details, downloaded=True)
   filepath: str = Env.get("FILELIST_PATH")
   filelist.save(filepath)
 

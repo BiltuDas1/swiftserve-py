@@ -166,7 +166,6 @@ class Fetcher:
             if os.path.exists(destination_path):
               os.remove(destination_path)
 
-
   def start(self):
     """
     Starts the operation of the Fetcher

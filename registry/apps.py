@@ -24,7 +24,7 @@ class RegistryConfig(AppConfig):
     Env.set("DOWNLOADS", downloads)
 
     chain_dir = os.path.join(downloads, "chaindata")
-    
+
     # FileList
     filelist = os.path.join(chain_dir, 'filelist.bin')
     Env.set("FILELIST_PATH", filelist)
@@ -43,4 +43,3 @@ class RegistryConfig(AppConfig):
     if os.path.exists(nodelist):
       pass
     Env.set("NODES", nodelistObj)
-
