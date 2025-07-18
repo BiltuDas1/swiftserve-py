@@ -37,10 +37,18 @@ class Fetcher:
           Env.get("DOWNLOADS"), f"{work.filename}.{work.chunk}.part"
       )
 
+      # Checking if the file is already downloaded (whole file)
+      if os.path.exists(work.filename):
+        continue
+
       # Fetching how much downloaded the current file
       downloaded = 0
       if os.path.exists(file_path):
         downloaded = os.path.getsize(file_path)
+
+      # If the chunk download is complete
+      if downloaded >= (work.end_byte - work.start_byte):
+        continue
 
       # Downloading the file (If failed then retry 3 times)
       for _ in range(3):
@@ -59,6 +67,8 @@ class Fetcher:
             mode = "ab" if downloaded > 0 else "wb"
             with open(file_path, mode) as f:
               f.write(response.content)
+          else:
+            continue
 
           with open(file_path, "rb") as f:
             sha1 = hashlib.sha1(f.read()).hexdigest()

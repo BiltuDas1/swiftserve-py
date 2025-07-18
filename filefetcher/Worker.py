@@ -5,6 +5,15 @@ from dataclasses import dataclass
 class FileWorker:
   """
   Class refers to the Work of the downloading chunks
+  Args:
+    filename: The name of the file
+    chunk: The number of the chunk
+    total_chunks: The count of total amount of chunks
+    start_byte: The starting byte address of the chunk
+    end_byte: The ending byte address of the chunk
+    sha1: The sha1 hash of the chunk
+    ip_address: IP Address of the sender of the chunk
+    port: Port number of the sender
   """
 
   filename: str
