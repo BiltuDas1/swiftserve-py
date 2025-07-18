@@ -41,19 +41,22 @@ def tell_about_chunk(
     sha1hash = hashlib.sha1(f.read(end_byte)).hexdigest()
 
   # Telling other nodes about the chunk
-  httpx.post(
-      url=f"http://{ip}:{port}/response",
-      data={
-          "filename": filename,
-          "chunk": chunk_num,
-          "total_chunks": file_details.total_chunks,
-          "start_byte": start_byte,
-          "end_byte": end_byte,
-          "sha1": sha1hash,
-          "ip_address": machine_ip,
-          "port": port,
-      },
-  )
+  try:
+    httpx.post(
+        url=f"http://{ip}:{port}/response",
+        data={
+            "filename": filename,
+            "chunk": chunk_num,
+            "total_chunks": file_details.total_chunks,
+            "start_byte": start_byte,
+            "end_byte": end_byte,
+            "sha1": sha1hash,
+            "ip_address": machine_ip,
+            "port": port,
+        },
+    )
+  except httpx.ReadTimeout:
+    pass
 
 
 def tell_other_nodes(
@@ -187,7 +190,11 @@ def download(response: HttpRequest):
       final_response = HttpResponse(data, status=206)
       final_response["Content-Type"] = "application/octet-stream"
       final_response["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+      final_response["Content-Disposition"] = f"attachment; filename=\"{filename}\""
       return final_response
   else:
     with open(file_path, "rb") as f:
-      return HttpResponse(f.read(), filename=filename, status=200)
+      final_response = HttpResponse(f.read(), status=200)
+      final_response["Content-Type"] = "application/octet-stream"
+      final_response["Content-Disposition"] = f"attachment; filename=\"{filename}\""
+      return final_response
