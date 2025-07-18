@@ -9,21 +9,23 @@ class FileList:
   """
 
   def __init__(self):
-    self.__list: dict[str, FileInfo.FileInfo] = {}
+    self.__list: dict[str, tuple[FileInfo.FileInfo, int]] = {}
 
-  def add(self, filename: str, fileinfo: FileInfo.FileInfo):
+  def add(self, filename: str, fileinfo: FileInfo.FileInfo, downloaded=True):
     """
     Adds the file and their information
     Args:
       filename: The name of the file
       fileinfo: The file information
+      downloaded: Set it True if the whole file is downloaded, otherwise False
     Raises:
       KeyError: If the filename already exist into the system
     """
     if filename in self.__list:
       raise KeyError("The filename already exist")
-
-    self.__list[filename] = fileinfo
+    
+    if downloaded:
+      self.__list[filename] = (fileinfo, fileinfo.total_chunks)
 
   def remove(self, filename: str):
     """
@@ -47,7 +49,7 @@ class FileList:
       KeyError: If the filename doesn't exist
     """
     if filename in self.__list:
-      return self.__list[filename]
+      return self.__list[filename][0]
     else:
       raise KeyError(f"the filename `{filename}` doesn't exist")
 
@@ -73,7 +75,7 @@ class FileList:
     """
     data = {}
     for filename, fileinfo in self.__list.items():
-      data[filename] = fileinfo.to_dict()
+      data[filename] = (fileinfo[0].to_dict(), fileinfo[1])
 
     with open(filepath, 'wb') as f:
       f.write(base64.b64encode(json.dumps(data).encode('utf-8')))
@@ -86,6 +88,23 @@ class FileList:
     """
     with open(filepath, 'rb') as f:
       bdata = base64.b64decode(f.read())
-      obj: dict[str, dict] = json.loads(bdata)
+      obj: dict[str, tuple[dict, int]] = json.loads(bdata)
       for filename, fileinfo in obj.items():
-        self.__list[filename] = FileInfo.FileInfo.from_dict(fileinfo)
+        self.__list[filename] = (FileInfo.FileInfo.from_dict(fileinfo[0]), fileinfo[1])
+
+  def completed(self, filename: str, chunk_num: int) -> bool:
+    """
+    Mark download complete of the specific chunk, make sure that you complete downloading the chunk serially, otherwise this method will throw an error
+    Args:
+      filename: The name of the file
+      chunk_num: The chunk which download has been completed
+    Returns:
+      bool: Returns True if successful, otherwise False
+    """
+    fileinfo, cchunk = self.__list[filename]
+    if (chunk_num == (cchunk + 1)) and (chunk_num <= fileinfo.total_chunks):
+      self.__list[filename] = (fileinfo, chunk_num)
+      return True
+    else:
+      return False
+    

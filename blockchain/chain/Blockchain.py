@@ -9,12 +9,14 @@ from .exceptions import (
     InconsistentTimeline,
     InvalidSignature,
 )
-from .ActionData import Node
+from .ActionData import Node, File
 from registry.Node.List import NodeList
+from registry.File.List import FileList
+from registry.File.FileInfo import FileInfo
 from environments import Env
 import httpx
 import os
-
+import time
 
 class Blockchain:
   """
@@ -78,6 +80,7 @@ class Blockchain:
 
     # Perform operation according to the action_type
     nodelist: NodeList = Env.get("NODES")
+    filelist: FileList = Env.get("FILES")
     match data.action_type:
       case "add_node":
         if isinstance(data.action_data, Node.Node):
@@ -99,7 +102,26 @@ class Blockchain:
           raise TypeError("Invalid action_data")
 
       case "add_file":
-        pass
+        if isinstance(data.action_data, File.File):
+          f = data.action_data
+          total_chunks = f.filesize // (4 * 1024 * 1024)
+          if (f.filesize % (4 * 1024 * 1024)) != 0:
+            total_chunks += 1
+          if not filelist.exist(f.filename):
+            filelist.add(f.filename, FileInfo(
+              f.filehash, f.filesize, int(time.time()), total_chunks
+            ))
+        else:
+          raise TypeError("Invalid action_data")
+        
+      case "remove_file":
+        if isinstance(data.action_data, File.File):
+          f = data.action_data
+
+          if not filelist.exist(f.filename):
+            filelist.remove(f.filename)
+        else:
+          raise TypeError("Invalid action_data")
 
   def last_block_number(self) -> int:
     """

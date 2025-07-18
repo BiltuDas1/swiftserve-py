@@ -34,8 +34,10 @@ class Fetcher:
     while len(self.__queue) != 0:
       work = self.__queue.popleft()
       file_path: str = os.path.join(
-          Env.get("DOWNLOADS"), f"{work.filename}.{work.chunk}.part"
+          Env.get("DOWNLOADS"), f"{work.filename}.part"
       )
+      destination_path: str = os.path.join(Env.get("DOWNLOADS"), work.filename)
+      filelist: FileList.FileList = Env.get("FILES")
 
       # Checking if the file is already downloaded (whole file)
       if os.path.exists(work.filename):
@@ -50,6 +52,7 @@ class Fetcher:
       if downloaded >= (work.end_byte - work.start_byte):
         continue
 
+      not_next_chunk = False
       # Downloading the file (If failed then retry 3 times)
       for _ in range(3):
         with httpx.Client() as client:
@@ -70,12 +73,20 @@ class Fetcher:
           else:
             continue
 
-          with open(file_path, "rb") as f:
-            sha1 = hashlib.sha1(f.read()).hexdigest()
+          # Appending the chunk at the end of the file, when the sha1 hash matched
+          with open(file_path, "rb") as readF:
+            sha1 = hashlib.sha1(readF.read()).hexdigest()
+            # If the file chunk is valid
+            if sha1 == work.sha1:
+              # If not downloaded the exact next chunk, then take the work and add it to the end of the work queue
+              if not filelist.completed(work.filename, work.chunk):
+                self.__queue.append(work)
+                not_next_chunk = True
+                break
 
-          # If the file chunk is valid
-          if sha1 == work.sha1:
-            break
+              with open(destination_path, 'ab') as writeF:
+                writeF.write(readF.read())
+              break
       else:
         print(f"invalid file chunk: {file_path}")
         destination_path: str = os.path.join(
@@ -89,6 +100,11 @@ class Fetcher:
         # Delete the incomplete chunk (If exist)
         if os.path.exists(file_path):
           os.remove(file_path)
+        continue
+
+      # If the current chunk is not next chunk, then skip task
+      if not_next_chunk:
+        continue
 
       # Tell random 4 nodes about the new chunk
       port: int = Env.get("PORT")
@@ -136,39 +152,20 @@ class Fetcher:
       except Exception:
         pass
 
-      # If the chunk is the last part of the file then combine all the chunks to one file
+      # If the chunk is the last part of the file then check if the whole file is intact
       if work.chunk == work.total_chunks:
-        destination_path: str = os.path.join(
-            Env.get("DOWNLOADS"), work.filename
-        )
-        sha512 = hashlib.sha512()
-        corrupted_chunks = False
+        # Delete the .part file
+        if os.path.exists(file_path):
+          os.remove(file_path)
 
-        for chunk in range(1, work.chunk + 1):
-          try:
-            file_path: str = os.path.join(
-                Env.get(
-                    "DOWNLOADS"), f"{work.filename}.{chunk}.part"
-            )
-            with open(file_path, "rb") as f:
-              data = f.read()
-              sha512.update(data)
-
-            with open(destination_path, "ab") as f:
-              f.write(data)
-
-            os.remove(file_path)  # Delete the chunk
-          except OSError:
-            corrupted_chunks = True
-            break
-
-        # Verifying the file hash
-        if not corrupted_chunks:
-          filelist: FileList.FileList = Env.get("FILES")
+        with open(destination_path, 'rb') as f:
+          sha512 = hashlib.sha512(f.read()).hexdigest()
           fileinfo = filelist.get(work.filename)
-          if sha512.hexdigest() != fileinfo.filehash:
+          if sha512 != fileinfo.filehash:
             # Invalid File, so delete it
-            os.remove(destination_path)
+            if os.path.exists(destination_path):
+              os.remove(destination_path)
+
 
   def start(self):
     """
