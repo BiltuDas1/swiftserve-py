@@ -67,6 +67,7 @@ def tell_other_nodes(
   machine_ip: str = Env.get("IPADDRESS")
   port: int = Env.get("PORT")
   keyring: Key.Key = Env.get("KEY")
+  chain_path: str = Env.get("CHAINDATA")
 
   if nodelist.size() > 4:
     picked_nodes = nodelist.random_picks(4)
@@ -85,6 +86,9 @@ def tell_other_nodes(
     )
   else:
     raise ValueError("no private key found")
+
+  chain.add(blk)
+  chain.save(chain_path)
 
   # Sending the blocks to the nodes
   # And telling them that the current node have downloadable chunks

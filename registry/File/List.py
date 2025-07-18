@@ -75,7 +75,7 @@ class FileList:
     for filename, fileinfo in self.__list.items():
       data[filename] = fileinfo.to_dict()
 
-    with open(filepath, 'wb', encoding='utf-8') as f:
+    with open(filepath, 'wb') as f:
       f.write(base64.b64encode(json.dumps(data).encode('utf-8')))
 
   def load(self, filepath: str):
