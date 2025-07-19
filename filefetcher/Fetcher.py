@@ -90,6 +90,10 @@ class Fetcher:
               with open(destination_path, 'ab') as writeF:
                 writeF.write(readF.read())
               break
+
+          # Delete the chunk
+          if os.path.exists(file_path):
+            os.remove(file_path)
       else:
         print(f"invalid file chunk: {file_path}")
         destination_path: str = os.path.join(
