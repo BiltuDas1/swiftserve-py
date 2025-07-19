@@ -1,3 +1,4 @@
+import re
 from typing import List
 from io import BytesIO
 from .Block import Block
@@ -34,12 +35,13 @@ class Blockchain:
     """
     self.__blocks: List[Block] = [genesis_block]
 
-  def add(self, block: Block) -> None:
+  def add(self, block: Block, blockOperation: bool = True) -> None:
     """
     Adds a block to the blockchain after validating all constraints.
 
     Args:
       block: The new block to be added.
+      blockOperation: Process action data, and then do the operation which is mentioned. Default True.
 
     Raises:
       InvalidNextBlock: If block number not comes after the top of the block.
@@ -47,6 +49,8 @@ class Blockchain:
       InconsistentHash: If the new block previous block hash field has a hash which is not matched with the top of the blockchain.
       InvalidSignature: If the new block signature is invalid.
       FileExistsError: If the public key of the creator of the new node doesn't exist into the system, and also not available into the internet to download.
+      TypeError: If it doesn't get the expected type of action_data.
+      ValueError: If it doesn't get the expected action_type.
     """
     data: BlockData = block.to_blockdata()
 
@@ -79,6 +83,10 @@ class Blockchain:
 
     self.__blocks.append(block)
 
+    # If block operation is not permitted
+    if not blockOperation:
+      return
+
     # Perform operation according to the action_type
     nodelist: NodeList = Env.get("NODES")
     filelist: FileList = Env.get("FILES")
@@ -86,14 +94,42 @@ class Blockchain:
       case "add_node":
         if isinstance(data.action_data, Node.Node):
           machine_ip: str = Env.get("IPADDRESS")
+          port: int = int(Env.get("PORT"))
           if machine_ip != data.action_data.nodeIP and nodelist.add(data.action_data.nodeIP, data.action_data.port):
             # Sending the whole blockchain data to the new node
             blocks_data = self.get_blocks_data(0)
-            httpx.post(
-                url=f"http://{data.action_data.nodeIP}:{data.action_data.port}/overwriteBlockchain",
-                content=blocks_data,
-                headers={"Content-Type": "application/octet-stream"}
-            )
+            try:
+              httpx.post(
+                  url=f"http://{data.action_data.nodeIP}:{data.action_data.port}/overwriteBlockchain",
+                  content=blocks_data,
+                  headers={"Content-Type": "application/octet-stream"}
+              )
+            except Exception:
+              pass
+
+            # Sending response to download files of current node
+            for filename in filelist.getFiles():
+              file_info = filelist.get(filename)
+              if file_info.total_chunks == 1:
+                end_byte = file_info.size - 1
+              else:
+                end_byte = (4 * 1024 * 1024) - 1
+              try:
+                httpx.post(
+                    url=f"http://{data.action_data.nodeIP}:{data.action_data.port}/response",
+                    data={
+                        "filename": filename,
+                        "chunk": 1,
+                        "total_chunks": filelist.get(filename).total_chunks,
+                        "start_byte": 0,
+                        "end_byte": end_byte,
+                        "sha1": file_info.filehash,
+                        "ip_address": machine_ip,
+                        "port": port,
+                    },
+                )
+              except Exception:
+                pass
         else:
           raise TypeError("Invalid action_data")
       case "remove_node":
@@ -123,6 +159,9 @@ class Blockchain:
             filelist.remove(f.filename)
         else:
           raise TypeError("Invalid action_data")
+        
+      case _:
+        raise ValueError("Invalid action_type")
 
   def last_block_number(self) -> int:
     """
@@ -225,7 +264,7 @@ class Blockchain:
         if self.size() == 0:
           self.add_genesis(blk)
         else:
-          self.add(blk)
+          self.add(blk, blockOperation=False)
         buffer = bytearray()
 
   def get_block_hash(self, position: int) -> str:

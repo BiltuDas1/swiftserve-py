@@ -120,3 +120,29 @@ class FileList:
     """
     fileinfo, cchunk = self.__list[filename]
     return cchunk == fileinfo.total_chunks
+
+  def getLastDownloadedChunk(self, filename: str) -> int:
+    """
+    Get the last downloaded chunk of the file
+    Args:
+      filename: The name of the file
+    Returns:
+      int: Returns the last downloaded chunk
+    """
+    return self.__list[filename][1]
+  
+  def size(self) -> int:
+    """
+    Get the size of the list
+    Returns:
+      int: Returns the size of the list
+    """
+    return len(self.__list)
+
+  def getFiles(self) -> list[str]:
+    """
+    Get the list of files
+    Returns:
+      list[str]: Returns the list of files
+    """
+    return list(self.__list.keys())

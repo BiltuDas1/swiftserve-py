@@ -40,6 +40,9 @@ class Fetcher:
       if filelist.isDownloaded(work.filename):
         continue
 
+      # Check till which chunk is downloaded
+      last_downloaded_chunk = filelist.getLastDownloadedChunk(work.filename)
+
       not_next_chunk = False
       # Downloading the file (If failed then retry 3 times)
       for _ in range(3):
