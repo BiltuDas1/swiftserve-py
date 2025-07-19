@@ -39,8 +39,8 @@ class Fetcher:
       destination_path: str = os.path.join(Env.get("DOWNLOADS"), work.filename)
       filelist: FileList.FileList = Env.get("FILES")
 
-      # Checking if the file is already downloaded (whole file)
-      if os.path.exists(work.filename):
+      # Check if the whole file is downloaded
+      if filelist.isDownloaded(work.filename):
         continue
 
       # Fetching how much downloaded the current file
@@ -84,6 +84,9 @@ class Fetcher:
                 not_next_chunk = True
                 break
 
+              filelist_path = Env.get("FILELIST_PATH")
+              filelist.save(filelist_path)
+              readF.seek(0)
               with open(destination_path, 'ab') as writeF:
                 writeF.write(readF.read())
               break

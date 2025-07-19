@@ -109,3 +109,14 @@ class FileList:
       return True
     else:
       return False
+
+  def isDownloaded(self, filename: str) -> bool:
+    """
+    Check if the file is downloaded
+    Args:
+      filename: The name of the file
+    Returns:
+      bool: Returns True if downloaded, otherwise False
+    """
+    fileinfo, cchunk = self.__list[filename]
+    return cchunk == fileinfo.total_chunks
