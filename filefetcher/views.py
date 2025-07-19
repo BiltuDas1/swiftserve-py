@@ -141,7 +141,7 @@ def file_download_handler(response: HttpRequest):
     "chunk": 1,
     "total_chunks": 1045,
     "start_byte": 0,
-    "end_byte": 4194303,
+    "end_byte": 4194304,
     "sha1": <hash_of_the_chunk>,
     "ip_address: <ip_address_of_the_node_who_sended_the_response>,
     "port": <port_number>

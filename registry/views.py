@@ -147,7 +147,7 @@ def upload(response: HttpRequest):
   # Sending 4MiB chunk
   if uploaded_file.size > (4 * 1024 * 1024):
     tell_other_nodes(uploaded_file.name, file_details,
-                     0, (4 * 1024 * 1024))
+                     0, (4 * 1024 * 1024) - 1)
   else:
     tell_other_nodes(uploaded_file.name, file_details,
                      0, uploaded_file.size)
@@ -184,7 +184,8 @@ def download(response: HttpRequest):
     with open(file_path, "rb") as f:
       f.seek(start)
       if isinstance(end, int):
-        data = f.read(end)
+        length = (end - start) + 1
+        data = f.read(length)
       else:
         data = f.read()
       final_response = HttpResponse(data, status=206)
