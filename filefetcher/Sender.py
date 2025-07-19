@@ -47,7 +47,10 @@ class Sender:
         with open(filepath, "rb") as f:
           f.seek(start_byte)
           sha1 = hashlib.sha1(f.read(4194304)).hexdigest()
-          end_byte = f.tell()
+          if next_chunk == work.total_chunks:
+            end_byte = f.tell()
+          else:
+            end_byte = f.tell() - 1
 
         # The file is not loaded completely (Or maybe in the saving state)
         if start_byte >= end_byte:

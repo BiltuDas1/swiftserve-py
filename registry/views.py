@@ -38,7 +38,8 @@ def tell_about_chunk(
   file_path: str = os.path.join(Env.get("DOWNLOADS"), filename)
   with open(file_path, "rb") as f:
     f.seek(start_byte)
-    sha1hash = hashlib.sha1(f.read(end_byte)).hexdigest()
+    length = (end_byte - start_byte) + 1
+    sha1hash = hashlib.sha1(f.read(length)).hexdigest()
 
   # Telling other nodes about the chunk
   try:
