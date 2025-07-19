@@ -41,5 +41,5 @@ class RegistryConfig(AppConfig):
     nodelistObj = NodeList()
 
     if os.path.exists(nodelist):
-      pass
+      nodelistObj.load(nodelist)
     Env.set("NODES", nodelistObj)

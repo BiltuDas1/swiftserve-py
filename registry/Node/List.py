@@ -1,3 +1,5 @@
+import base64
+import json
 import httpx
 from typing import List, Dict
 import random
@@ -90,6 +92,29 @@ class NodeList:
       int: Size of the node list.
     """
     return len(self._ip_list)
+
+  def save(self, filepath: str):
+    """
+    Save the NodeList into a file
+    Args:
+      filepath: The path where to save the data at
+    """
+    with open(filepath, 'wb') as f:
+      f.write(base64.b64encode(json.dumps(self._ports).encode('utf-8')))
+
+  def load(self, filepath: str):
+    """
+    Load the NodeList from a file
+    Args:
+      filepath: The path where the file is saved
+    """
+    with open(filepath, 'rb') as f:
+      bdata = base64.b64decode(f.read())
+      self._ports: dict[str, int] = json.loads(bdata)
+
+      for ipAddress in self._ports.keys():
+        self._ip_set.add(ipAddress)
+        self._ip_list.append(ipAddress)
 
   @staticmethod
   def get_hash(ip_address: str, port: int, block_number: int) -> str:

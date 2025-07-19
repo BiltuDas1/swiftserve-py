@@ -130,7 +130,7 @@ class FileList:
       int: Returns the last downloaded chunk
     """
     return self.__list[filename][1]
-  
+
   def size(self) -> int:
     """
     Get the size of the list

@@ -107,6 +107,8 @@ class Blockchain:
             except Exception:
               pass
 
+            nodelist.save(Env.get("NODELIST_PATH"))
+
             # Sending response to download files of current node
             for filename in filelist.getFiles():
               file_info = filelist.get(filename)
@@ -159,7 +161,7 @@ class Blockchain:
             filelist.remove(f.filename)
         else:
           raise TypeError("Invalid action_data")
-        
+
       case _:
         raise ValueError("Invalid action_type")
 
