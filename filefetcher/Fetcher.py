@@ -2,7 +2,7 @@ import base64
 import json
 from blockchain.chain import Variables
 from . import Worker
-from threading import Thread
+from threading import Thread, Lock
 import httpx
 import os
 from environments import Env
@@ -21,6 +21,8 @@ class Fetcher:
   def __init__(self):
     self.__queue: deque[Worker.FileWorker] = deque()
     self.__job = Thread(target=self.__work)
+    self.__lck = Lock()
+
 
   def add_work(self, job: Worker.FileWorker):
     """
@@ -28,7 +30,8 @@ class Fetcher:
     Args:
       job: The FileWorker object representing the job which needs to done
     """
-    self.__queue.append(job)
+    with self.__lck:
+      self.__queue.append(job)
 
   def get_work(self) -> Worker.FileWorker | None:
     """
@@ -36,10 +39,11 @@ class Fetcher:
     Returns:
       FileWorker: If the worker list is not empty
     """
-    if len(self.__queue) == 0:
-      return None
+    with self.__lck:
+      if len(self.__queue) == 0:
+        return None
 
-    return self.__queue.popleft()
+      return self.__queue.popleft()
 
   def load(self, filepath: str):
     """
@@ -47,20 +51,21 @@ class Fetcher:
     Args:
       filepath: The path where the queue is saved
     """
-    with open(filepath, "rb") as f:
-      work: bytearray = bytearray()
-      start = False
-      while len(data := f.read(1)) != 0:
-        if data.hex() == Variables.START.hex():
-          start = True
-        elif data.hex() == Variables.END.hex():
-          start = False
-          self.__queue.append(Worker.FileWorker.from_dict(
-              json.loads(base64.b64decode(work).decode('utf-8'))))
-          work.clear()
-        else:
-          if start:
-            work.extend(data)
+    with self.__lck:
+      with open(filepath, "rb") as f:
+        work: bytearray = bytearray()
+        start = False
+        while len(data := f.read(1)) != 0:
+          if data.hex() == Variables.START.hex():
+            start = True
+          elif data.hex() == Variables.END.hex():
+            start = False
+            self.__queue.append(Worker.FileWorker.from_dict(
+                json.loads(base64.b64decode(work).decode('utf-8'))))
+            work.clear()
+          else:
+            if start:
+              work.extend(data)
 
   def save(self, filepath: str):
     """
@@ -68,11 +73,12 @@ class Fetcher:
     Args:
       filepath: The path where the queue will be saved
     """
-    with open(filepath, "wb") as f:
-      for work in self.__queue:
-        f.write(Variables.START)
-        f.write(base64.b64encode(json.dumps(work.to_dict()).encode('utf-8')))
-        f.write(Variables.END)
+    with self.__lck:
+      with open(filepath, "wb") as f:
+        for work in self.__queue:
+          f.write(Variables.START)
+          f.write(base64.b64encode(json.dumps(work.to_dict()).encode('utf-8')))
+          f.write(Variables.END)
 
   def __work(self):
     """
