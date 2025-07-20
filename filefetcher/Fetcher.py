@@ -12,6 +12,7 @@ from registry.File import List as FileList
 from registry.Node import List as NodeList
 from datetime import datetime
 from collections import deque
+import persistqueue
 
 
 class Fetcher:
@@ -20,10 +21,8 @@ class Fetcher:
   """
 
   def __init__(self):
-    self.__queue: deque[Worker.FileWorker] = deque()
+    self.__queue: persistqueue.Queue = persistqueue.Queue(path=Env.get("FILE_DOWNLOADER_SAVE"), autosave=True)
     self.__job = Thread(target=self.__work)
-    self.__lck = Lock()
-
 
   def add_work(self, job: Worker.FileWorker):
     """
@@ -31,8 +30,7 @@ class Fetcher:
     Args:
       job: The FileWorker object representing the job which needs to done
     """
-    with self.__lck:
-      self.__queue.append(job)
+    self.__queue.put(job)
 
   def get_work(self) -> Worker.FileWorker | None:
     """
@@ -40,46 +38,10 @@ class Fetcher:
     Returns:
       FileWorker: If the worker list is not empty
     """
-    with self.__lck:
-      if len(self.__queue) == 0:
-        return None
+    if self.__queue.empty():
+      return None
 
-      return self.__queue.popleft()
-
-  def load(self, filepath: str):
-    """
-    Loads the Queue from the filepath
-    Args:
-      filepath: The path where the queue is saved
-    """
-    with self.__lck:
-      with open(filepath, "rb") as f:
-        work: bytearray = bytearray()
-        start = False
-        while len(data := f.read(1)) != 0:
-          if data.hex() == Variables.START.hex():
-            start = True
-          elif data.hex() == Variables.END.hex():
-            start = False
-            self.__queue.append(Worker.FileWorker.from_dict(
-                json.loads(base64.b64decode(work).decode('utf-8'))))
-            work.clear()
-          else:
-            if start:
-              work.extend(data)
-
-  def save(self, filepath: str):
-    """
-    Saves the Queue to the filepath
-    Args:
-      filepath: The path where the queue will be saved
-    """
-    with self.__lck:
-      with open(filepath, "wb") as f:
-        for work in self.__queue:
-          f.write(Variables.START)
-          f.write(base64.b64encode(json.dumps(work.to_dict()).encode('utf-8')))
-          f.write(Variables.END)
+    return self.__queue.get()
 
   def __work(self):
     """
@@ -91,14 +53,11 @@ class Fetcher:
 
       # Check if the whole file is downloaded
       if filelist.isDownloaded(work.filename):
-        self.save(Env.get("FILE_DOWNLOADER_SAVE"))
         continue
 
       # If not downloaded the exact next chunk, then take the work and add it to the end of the work queue
       if (filelist.getLastDownloadedChunk(work.filename) + 1) != work.chunk:
-        time.sleep(2)
         self.add_work(work)
-        self.save(Env.get("FILE_DOWNLOADER_SAVE"))
         continue
 
       # Downloading the file (If failed then retry 3 times)
@@ -140,7 +99,6 @@ class Fetcher:
               f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] failed to download chunk {work.chunk} of `{destination_path}`\n"
           )
         self.add_work(work)
-        self.save(Env.get("FILE_DOWNLOADER_SAVE"))
         continue
 
       # Tell random 4 nodes about the new chunk
@@ -199,8 +157,6 @@ class Fetcher:
             if os.path.exists(destination_path):
               os.remove(destination_path)
 
-      self.save(Env.get("FILE_DOWNLOADER_SAVE"))
-
   def start(self):
     """
     Starts the operation of the Fetcher
@@ -210,7 +166,7 @@ class Fetcher:
     """
     if self.__job.is_alive():
       raise ChildProcessError("job is already started")
-    elif len(self.__queue) == 0:
+    elif self.__queue.empty():
       raise IndexError("task queue is empty")
 
     try:

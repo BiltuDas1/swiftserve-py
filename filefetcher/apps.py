@@ -15,18 +15,14 @@ class FilefetcherConfig(AppConfig):
     """
     Env.set("LOGFILE", os.path.join("error.log"))
     Env.set("FILE_DOWNLOADER_SAVE", os.path.join(
-        Env.get("DOWNLOADS"), "chaindata", "fetcher.bin"))
+        Env.get("DOWNLOADS"), "chaindata", "fetcher.queue"))
     Env.set("FILE_SENDER_SAVE", os.path.join(
-        Env.get("DOWNLOADS"), "chaindata", "sender.bin"))
+        Env.get("DOWNLOADS"), "chaindata", "sender.queue"))
 
     file_downloader = Fetcher()
-    if os.path.exists(Env.get("FILE_DOWNLOADER_SAVE")):
-      file_downloader.load(Env.get("FILE_DOWNLOADER_SAVE"))
     Env.set("FILE_DOWNLOADER", file_downloader)
 
     file_sender = Sender()
-    if os.path.exists(Env.get("FILE_SENDER_SAVE")):
-      file_sender.load(Env.get("FILE_SENDER_SAVE"))
     Env.set("FILE_SENDER", file_sender)
 
     # Start the threads
