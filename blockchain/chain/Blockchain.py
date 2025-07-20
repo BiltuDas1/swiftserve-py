@@ -266,7 +266,11 @@ class Blockchain:
         if self.size() == 0:
           self.add_genesis(blk)
         else:
-          self.add(blk, blockOperation=False)
+          # Check if the action_type is related to files, if yes then perform file operations like delete file or download file
+          if blk.to_blockdata().action_type in ("add_file", "remove_file"):
+            self.add(blk)
+          else:
+            self.add(blk, blockOperation=False)
         buffer = bytearray()
 
   def get_block_hash(self, position: int) -> str:
