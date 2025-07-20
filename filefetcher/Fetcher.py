@@ -79,6 +79,7 @@ class Fetcher:
     Method refers to the job which will be done by the fetcher
     """
     while (work := self.get_work()) is not None:
+      self.save(Env.get("FILE_DOWNLOADER_SAVE"))
       destination_path: str = os.path.join(Env.get("DOWNLOADS"), work.filename)
       filelist: FileList.FileList = Env.get("FILES")
 
@@ -111,6 +112,7 @@ class Fetcher:
           # If not downloaded the exact next chunk, then take the work and add it to the end of the work queue
           if not filelist.completed(work.filename, work.chunk):
             self.add_work(work)
+            self.save(Env.get("FILE_DOWNLOADER_SAVE"))
             not_next_chunk = True
             break
 
@@ -130,11 +132,13 @@ class Fetcher:
               f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] failed to download chunk {work.chunk} of `{destination_path}`\n"
           )
         self.add_work(work)
+        self.save(Env.get("FILE_DOWNLOADER_SAVE"))
         continue
 
       # If the current chunk is not next chunk, then skip task
       if not_next_chunk:
         self.add_work(work)
+        self.save(Env.get("FILE_DOWNLOADER_SAVE"))
         continue
 
       # Tell random 4 nodes about the new chunk

@@ -79,6 +79,7 @@ class Sender:
     downloads: str = Env.get("DOWNLOADS")
 
     while (work := self.get_work()) is not None:
+      self.save(Env.get("FILE_SENDER_SAVE"))
       next_chunk = work.chunk + 1
       if next_chunk > work.total_chunks:
         continue
@@ -86,6 +87,7 @@ class Sender:
       filepath = os.path.join(downloads, work.filename)
       if not os.path.exists(filepath):
         self.add_work(work)
+        self.save(Env.get("FILE_SENDER_SAVE"))
         continue
 
       # Calculating the start byte and the end byte
@@ -101,6 +103,7 @@ class Sender:
       # The file is not loaded completely (Or maybe in the saving state)
       if start_byte >= end_byte:
         self.add_work(work)
+        self.save(Env.get("FILE_SENDER_SAVE"))
         continue
 
       # Telling the client that the chunk is available
