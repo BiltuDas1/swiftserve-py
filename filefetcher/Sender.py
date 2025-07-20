@@ -79,9 +79,9 @@ class Sender:
     downloads: str = Env.get("DOWNLOADS")
 
     while (work := self.get_work()) is not None:
-      self.save(Env.get("FILE_SENDER_SAVE"))
       next_chunk = work.chunk + 1
       if next_chunk > work.total_chunks:
+        self.save(Env.get("FILE_SENDER_SAVE"))
         continue
 
       filepath = os.path.join(downloads, work.filename)

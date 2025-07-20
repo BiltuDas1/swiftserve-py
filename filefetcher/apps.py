@@ -27,7 +27,7 @@ class FilefetcherConfig(AppConfig):
     file_sender = Sender()
     if os.path.exists(Env.get("FILE_SENDER_SAVE")):
       file_sender.load(Env.get("FILE_SENDER_SAVE"))
-    Env.set("FILE_SENDER", Sender())
+    Env.set("FILE_SENDER", file_sender)
 
     # Start the threads
     try:

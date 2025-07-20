@@ -79,12 +79,12 @@ class Fetcher:
     Method refers to the job which will be done by the fetcher
     """
     while (work := self.get_work()) is not None:
-      self.save(Env.get("FILE_DOWNLOADER_SAVE"))
       destination_path: str = os.path.join(Env.get("DOWNLOADS"), work.filename)
       filelist: FileList.FileList = Env.get("FILES")
 
       # Check if the whole file is downloaded
       if filelist.isDownloaded(work.filename):
+        self.save(Env.get("FILE_DOWNLOADER_SAVE"))
         continue
 
       not_next_chunk = False
@@ -196,6 +196,8 @@ class Fetcher:
             # Invalid File, so delete it
             if os.path.exists(destination_path):
               os.remove(destination_path)
+
+      self.save(Env.get("FILE_DOWNLOADER_SAVE"))
 
   def start(self):
     """
