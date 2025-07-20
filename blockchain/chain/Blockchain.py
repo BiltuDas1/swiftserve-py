@@ -1,3 +1,4 @@
+import hashlib
 import re
 from typing import List
 from io import BytesIO
@@ -110,12 +111,17 @@ class Blockchain:
             nodelist.save(Env.get("NODELIST_PATH"))
 
             # Sending response to download files of current node
+            downloads = Env.get("DOWNLOADS")
             for filename in filelist.getFiles():
               file_info = filelist.get(filename)
               if file_info.total_chunks == 1:
                 end_byte = file_info.size - 1
               else:
                 end_byte = (4 * 1024 * 1024) - 1
+
+              with open(os.path.join(downloads, filename), "rb") as f:
+                sha1 = hashlib.sha1(f.read(end_byte + 1)).hexdigest()
+
               try:
                 httpx.post(
                     url=f"http://{data.action_data.nodeIP}:{data.action_data.port}/response",
@@ -125,7 +131,7 @@ class Blockchain:
                         "total_chunks": filelist.get(filename).total_chunks,
                         "start_byte": 0,
                         "end_byte": end_byte,
-                        "sha1": file_info.filehash,
+                        "sha1": sha1,
                         "ip_address": machine_ip,
                         "port": port,
                     },
