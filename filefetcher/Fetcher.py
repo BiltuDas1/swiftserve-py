@@ -1,5 +1,6 @@
 import base64
 import json
+import time
 from blockchain.chain import Variables
 from . import Worker
 from threading import Thread, Lock
@@ -94,7 +95,8 @@ class Fetcher:
         continue
 
       # If not downloaded the exact next chunk, then take the work and add it to the end of the work queue
-      if not filelist.completed(work.filename, work.chunk):
+      if (filelist.getLastDownloadedChunk(work.filename) + 1) != work.chunk:
+        time.sleep(2)
         self.add_work(work)
         self.save(Env.get("FILE_DOWNLOADER_SAVE"))
         continue
@@ -125,6 +127,8 @@ class Fetcher:
           # Appending the at the end of the file
           with open(destination_path, 'ab') as writeF:
             writeF.write(response.content)
+          filelist.completed(work.filename, work.chunk)
+          filelist.save(filelist_path)
           break
       else:
         print(f"invalid chunk {work.chunk}")
