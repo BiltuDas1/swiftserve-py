@@ -18,7 +18,7 @@ class Sender:
   """
 
   def __init__(self):
-    self.__queue: persistqueue.SQLiteQueue = persistqueue.SQLiteQueue(path=Env.get("FILE_SENDER_SAVE"), auto_commit=True)
+    self.__queue: persistqueue.FIFOSQLiteQueue = persistqueue.FIFOSQLiteQueue(path=Env.get("FILE_SENDER_SAVE"), auto_commit=True, multithreading=True)
     self.__job = Thread(target=self.__work)
 
   def add_work(self, job: Worker.FileWorker):
