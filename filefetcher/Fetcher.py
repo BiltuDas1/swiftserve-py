@@ -21,7 +21,7 @@ class Fetcher:
   """
 
   def __init__(self):
-    self.__queue: persistqueue.Queue = persistqueue.Queue(path=Env.get("FILE_DOWNLOADER_SAVE"), autosave=True)
+    self.__queue: persistqueue.SQLiteQueue = persistqueue.SQLiteQueue(path=Env.get("FILE_DOWNLOADER_SAVE"), auto_commit=True)
     self.__job = Thread(target=self.__work)
 
   def add_work(self, job: Worker.FileWorker):
