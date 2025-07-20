@@ -40,7 +40,7 @@ class Sender:
     """
     if len(self.__queue) == 0:
       return None
-    
+
     # Remove the queue item from the hard disk
     save_path = Env.get("FILE_SENDER_SAVE")
     with open(save_path, "r+b") as f:
@@ -71,18 +71,18 @@ class Sender:
     """
     with open(filepath, "rb") as f:
       work: bytearray = bytearray()
+      start = False
       while len(data := f.read(1)) != 0:
-        start = False
         if data.hex() == Variables.START.hex():
           start = True
         elif data.hex() == Variables.END.hex():
           start = False
-          self.__queue.add(Worker.FileWorker.from_dict(json.loads(base64.b64decode(work).decode('utf-8'))))
+          self.__queue.add(Worker.FileWorker.from_dict(
+              json.loads(base64.b64decode(work).decode('utf-8'))))
           work.clear()
         else:
           if start:
             work.extend(data)
-
 
   def __work(self):
     """

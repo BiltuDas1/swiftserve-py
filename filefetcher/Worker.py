@@ -39,11 +39,10 @@ class FileWorker:
         "ip_address": self.ip_address,
         "port": self.port,
     }
-  
+
   @classmethod
   def from_dict(cls, data: dict) -> "FileWorker":
     """
     Method converts the Dictionary object to a FileWorker object
     """
     return cls(**data)
-

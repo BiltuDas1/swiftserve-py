@@ -34,7 +34,7 @@ class Fetcher:
       f.write(Variables.START)
       f.write(base64.b64encode(json.dumps(job.to_dict()).encode('utf-8')))
       f.write(Variables.END)
-  
+
   def get_work(self) -> Worker.FileWorker | None:
     """
     Getting the job from the worker list
@@ -43,7 +43,7 @@ class Fetcher:
     """
     if len(self.__queue) == 0:
       return None
-    
+
     # Remove the queue item from the hard disk
     save_path = Env.get("FILE_DOWNLOADER_SAVE")
     with open(save_path, "r+b") as f:
@@ -74,13 +74,14 @@ class Fetcher:
     """
     with open(filepath, "rb") as f:
       work: bytearray = bytearray()
+      start = False
       while len(data := f.read(1)) != 0:
-        start = False
         if data.hex() == Variables.START.hex():
           start = True
         elif data.hex() == Variables.END.hex():
           start = False
-          self.__queue.append(Worker.FileWorker.from_dict(json.loads(base64.b64decode(work).decode('utf-8'))))
+          self.__queue.append(Worker.FileWorker.from_dict(
+              json.loads(base64.b64decode(work).decode('utf-8'))))
           work.clear()
         else:
           if start:
