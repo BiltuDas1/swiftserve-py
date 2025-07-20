@@ -125,7 +125,6 @@ def file_response_handler(response: HttpRequest):
   # Add the download job into queue
   fetcher: Fetcher.Fetcher = Env.get("FILE_DOWNLOADER")
   fetcher.add_work(work)
-  fetcher.save(Env.get("FILE_DOWNLOADER_SAVE"))
   if not fetcher.is_running():
     fetcher.start()
 
@@ -164,7 +163,6 @@ def file_download_handler(response: HttpRequest):
   # Add the webhook job into queue
   sender: Sender.Sender = Env.get("FILE_SENDER")
   sender.add_work(work)
-  sender.save(Env.get("FILE_SENDER_SAVE"))
   if not sender.is_running():
     sender.start()
 
