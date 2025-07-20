@@ -87,7 +87,12 @@ class Fetcher:
         self.save(Env.get("FILE_DOWNLOADER_SAVE"))
         continue
 
-      not_next_chunk = False
+      # If not downloaded the exact next chunk, then take the work and add it to the end of the work queue
+      if not filelist.completed(work.filename, work.chunk):
+        self.add_work(work)
+        self.save(Env.get("FILE_DOWNLOADER_SAVE"))
+        continue
+
       # Downloading the file (If failed then retry 3 times)
       for _ in range(3):
         with httpx.Client() as client:
@@ -109,13 +114,6 @@ class Fetcher:
           if response.status_code not in (200, 206):
             continue
 
-          # If not downloaded the exact next chunk, then take the work and add it to the end of the work queue
-          if not filelist.completed(work.filename, work.chunk):
-            self.add_work(work)
-            self.save(Env.get("FILE_DOWNLOADER_SAVE"))
-            not_next_chunk = True
-            break
-
           filelist_path = Env.get("FILELIST_PATH")
           filelist.save(filelist_path)
           # Appending the at the end of the file
@@ -131,12 +129,6 @@ class Fetcher:
           f.write(
               f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] failed to download chunk {work.chunk} of `{destination_path}`\n"
           )
-        self.add_work(work)
-        self.save(Env.get("FILE_DOWNLOADER_SAVE"))
-        continue
-
-      # If the current chunk is not next chunk, then skip task
-      if not_next_chunk:
         self.add_work(work)
         self.save(Env.get("FILE_DOWNLOADER_SAVE"))
         continue
