@@ -24,3 +24,26 @@ class FileWorker:
   sha1: str
   ip_address: str
   port: int
+
+  def to_dict(self) -> dict:
+    """
+    Method converts the FileWorker object to Dictionary object
+    """
+    return {
+        "filename": self.filename,
+        "chunk": self.chunk,
+        "total_chunks": self.total_chunks,
+        "start_byte": self.start_byte,
+        "end_byte": self.end_byte,
+        "sha1": self.sha1,
+        "ip_address": self.ip_address,
+        "port": self.port,
+    }
+  
+  @classmethod
+  def from_dict(cls, data: dict) -> "FileWorker":
+    """
+    Method converts the Dictionary object to a FileWorker object
+    """
+    return cls(**data)
+

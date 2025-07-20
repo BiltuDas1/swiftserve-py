@@ -1,3 +1,6 @@
+import base64
+import json
+from blockchain.chain import Variables
 from . import Worker
 from threading import Thread
 import httpx
@@ -26,22 +29,74 @@ class Fetcher:
       job: The FileWorker object representing the job which needs to done
     """
     self.__queue.append(job)
+    save_path = Env.get("FILE_DOWNLOADER_SAVE")
+    with open(save_path, "ab") as f:
+      f.write(Variables.START)
+      f.write(base64.b64encode(json.dumps(job.to_dict()).encode('utf-8')))
+      f.write(Variables.END)
+  
+  def get_work(self) -> Worker.FileWorker | None:
+    """
+    Getting the job from the worker list
+    Returns:
+      FileWorker: If the worker list is not empty
+    """
+    if len(self.__queue) == 0:
+      return None
+    
+    # Remove the queue item from the hard disk
+    save_path = Env.get("FILE_DOWNLOADER_SAVE")
+    with open(save_path, "r+b") as f:
+      f.seek(0)
+      reading_pointer = 0
+      writing_pointer = 0
+      while True:
+        data = f.read(1)
+        if data.hex() == Variables.END.hex():
+          reading_pointer = f.tell()
+          break
+
+      # Overwriting from the reading_pointer
+      while len(data := f.read(1)) != 0:
+        reading_pointer += 1
+        f.seek(writing_pointer)
+        f.write(data)
+        writing_pointer += 1
+        f.seek(reading_pointer)
+
+    return self.__queue.popleft()
+
+  def load(self, filepath: str):
+    """
+    Loads the Queue from the filepath
+    Args:
+      filepath: The path where the queue is saved
+    """
+    with open(filepath, "rb") as f:
+      work: bytearray = bytearray()
+      while len(data := f.read(1)) != 0:
+        start = False
+        if data.hex() == Variables.START.hex():
+          start = True
+        elif data.hex() == Variables.END.hex():
+          start = False
+          self.__queue.append(Worker.FileWorker.from_dict(json.loads(base64.b64decode(work).decode('utf-8'))))
+          work.clear()
+        else:
+          if start:
+            work.extend(data)
 
   def __work(self):
     """
     Method refers to the job which will be done by the fetcher
     """
-    while len(self.__queue) != 0:
-      work = self.__queue.popleft()
+    while (work := self.get_work()) is not None:
       destination_path: str = os.path.join(Env.get("DOWNLOADS"), work.filename)
       filelist: FileList.FileList = Env.get("FILES")
 
       # Check if the whole file is downloaded
       if filelist.isDownloaded(work.filename):
         continue
-
-      # Check till which chunk is downloaded
-      last_downloaded_chunk = filelist.getLastDownloadedChunk(work.filename)
 
       not_next_chunk = False
       # Downloading the file (If failed then retry 3 times)
@@ -67,7 +122,7 @@ class Fetcher:
 
           # If not downloaded the exact next chunk, then take the work and add it to the end of the work queue
           if not filelist.completed(work.filename, work.chunk):
-            self.__queue.append(work)
+            self.add_work(work)
             not_next_chunk = True
             break
 
@@ -86,10 +141,12 @@ class Fetcher:
           f.write(
               f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] failed to download chunk {work.chunk} of `{destination_path}`\n"
           )
+        self.add_work(work)
         continue
 
       # If the current chunk is not next chunk, then skip task
       if not_next_chunk:
+        self.add_work(work)
         continue
 
       # Tell random 4 nodes about the new chunk
