@@ -28,3 +28,11 @@ class FilefetcherConfig(AppConfig):
     if os.path.exists(Env.get("FILE_SENDER_SAVE")):
       file_sender.load(Env.get("FILE_SENDER_SAVE"))
     Env.set("FILE_SENDER", Sender())
+
+    # Start the threads
+    try:
+      file_downloader.start()
+      file_sender.start()
+    except IndexError:
+      pass
+    
