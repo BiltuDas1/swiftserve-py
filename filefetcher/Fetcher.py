@@ -29,11 +29,6 @@ class Fetcher:
       job: The FileWorker object representing the job which needs to done
     """
     self.__queue.append(job)
-    save_path = Env.get("FILE_DOWNLOADER_SAVE")
-    with open(save_path, "ab") as f:
-      f.write(Variables.START)
-      f.write(base64.b64encode(json.dumps(job.to_dict()).encode('utf-8')))
-      f.write(Variables.END)
 
   def get_work(self) -> Worker.FileWorker | None:
     """
@@ -43,26 +38,6 @@ class Fetcher:
     """
     if len(self.__queue) == 0:
       return None
-
-    # Remove the queue item from the hard disk
-    save_path = Env.get("FILE_DOWNLOADER_SAVE")
-    with open(save_path, "r+b") as f:
-      f.seek(0)
-      reading_pointer = 0
-      writing_pointer = 0
-      while True:
-        data = f.read(1)
-        if data.hex() == Variables.END.hex():
-          reading_pointer = f.tell()
-          break
-
-      # Overwriting from the reading_pointer
-      while len(data := f.read(1)) != 0:
-        reading_pointer += 1
-        f.seek(writing_pointer)
-        f.write(data)
-        writing_pointer += 1
-        f.seek(reading_pointer)
 
     return self.__queue.popleft()
 
@@ -86,6 +61,18 @@ class Fetcher:
         else:
           if start:
             work.extend(data)
+
+  def save(self, filepath: str):
+    """
+    Saves the Queue to the filepath
+    Args:
+      filepath: The path where the queue will be saved
+    """
+    with open(filepath, "wb") as f:
+      for work in self.__queue:
+        f.write(Variables.START)
+        f.write(base64.b64encode(json.dumps(work.to_dict()).encode('utf-8')))
+        f.write(Variables.END)
 
   def __work(self):
     """
