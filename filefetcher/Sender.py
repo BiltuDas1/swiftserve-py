@@ -114,7 +114,7 @@ class Sender:
       machine_ip: str = Env.get("IPADDRESS")
       port: int = Env.get("PORT")
       try:
-        httpx.post(
+        response = httpx.post(
             url=f"http://{work.ip_address}:{work.port}/response",
             data={
                 "filename": work.filename,
@@ -126,9 +126,18 @@ class Sender:
                 "ip_address": machine_ip,
                 "port": port,
             },
+            timeout=10
         )
+        if response.status_code != 200:
+          self.add_work(work)
+          self.save(Env.get("FILE_SENDER_SAVE"))
+          continue
       except Exception:
-        pass
+        self.add_work(work)
+        self.save(Env.get("FILE_SENDER_SAVE"))
+        continue
+
+      self.save(Env.get("FILE_SENDER_SAVE"))
       time.sleep(2)
 
   def start(self):
