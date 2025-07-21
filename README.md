@@ -67,4 +67,19 @@ gunicorn swiftserve.wsgi:application --bind <public_ip_address>:8000
 
 ## API Usage
 
-- `/addBlock` - This HTTP Endpoint allows to add a new block to the blockchain, we need to pass a bytes data with the HTTP header `{"Content-Type": "application/octet-stream"}`. This endpoint only supports the byte version of the [Block](./blockchain/chain/Block.py#L15) class, which can be done using [Block.to_bytes()](./blockchain/chain/Block.py#L140) method.
+### GET Requests
+
+- [`/getHash?num=<block_number>`](./blockchain/views.py#L191) - This HTTP Endpoint allows to get the SHA256 hash of the specific block mentioned into the `<block_number>` parameter. If the parameter empty or the block doesn't exist then it returns empty string.
+- [`/topBlockNumber`](./blockchain/views.py#L206) - This HTTP Endpoint allows to get the top block number of the blockchain.
+- [`/totalBlocks`](./blockchain/views.py#L215) - This HTTP Endpoint allows to get the total number of blocks in the blockchain.
+- [`/key`](./blockchain/views.py#L241) - This HTTP Endpoint allows to get the public key of the current node.
+- [`/download?file=<name_of_the_file>`](./registry/views.py#L160) - This HTTP Endpoint allows to download the file from the registry.
+
+### POST Requests
+
+- [`/addBlock`](./blockchain/views.py#L94) - This HTTP Endpoint allows to add a new block to the blockchain, we need to pass a bytes data with the HTTP header `{"Content-Type": "application/octet-stream"}`. This endpoint only supports the byte version of the [Block](./blockchain/chain/Block.py#L15) class, which can be done using [Block.to_bytes()](./blockchain/chain/Block.py#L140) method.
+- [`/getBlockDatas`](./blockchain/views.py#L224) - This HTTP Endpoint allows to get the list of block datas starts from the `num` block to the end of the blockchain. `num` refers to the starting block number, from where the data will be fetched.
+- [`/overwriteBlockchain`](./blockchain/views.py#L257) - This HTTP Endpoint allows to overwrite the blockchain with the new blockchain. It will only works when the target node blockchain contains only the genesis block.
+- [`/response`](./filefetcher/views.py#L94) - Receives download request of file(s) from other nodes.
+- [`/webhook`](./filefetcher/views.py#L135) - Webhook which process the information and let the client know when the file is available.
+- [`/upload`](./registry/views.py#L128) - Receives the file from the client and create a new block with the file information and send it to other nodes.

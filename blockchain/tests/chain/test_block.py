@@ -132,7 +132,8 @@ class BlockTest(TestCase):
     modified_data_b64 = base64.b64encode(json.dumps(block_data_dict).encode("utf-8"))
 
     # Get original hash and signature
-    original_hash_b64 = base64.b64encode(self.block_with_node.get_hash().encode("utf-8"))
+    original_hash_b64 = base64.b64encode(
+        self.block_with_node.get_hash().encode("utf-8"))
     original_sig_b64 = base64.b64encode(self.block_with_node.get_signature_bytes())
 
     # Assemble the malformed byte stream

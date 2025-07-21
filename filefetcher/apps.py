@@ -31,4 +31,3 @@ class FilefetcherConfig(AppConfig):
       file_sender.start()
     except IndexError:
       pass
-    

@@ -287,9 +287,12 @@ class Blockchain:
       position: Index of the block.
 
     Returns:
-      str: Hash of the specified block.
+      str: Hash of the specified block, if hash not exist, then return empty string.
     """
-    return self.__blocks[position].get_hash()
+    try:
+      return self.__blocks[position].get_hash()
+    except IndexError:
+      return ""
 
   def add_genesis(self, genesis_block: Block) -> bool:
     """
