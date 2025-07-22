@@ -1,15 +1,34 @@
 # SwiftServe
 
-This is the service which uses private blockchain to share files between nodes, we can use it for copying the files between multiple computers, like bittorrent.
+SwiftServe is a decentralized file-sharing service built with Python and Django. It leverages a private blockchain to securely manage node membership and track file availability across a peer-to-peer network, offering a file synchronization mechanism similar in concept to BitTorrent.
+
+## Table of Contents
+
+- [SwiftServe](#swiftserve)
+  - [Table of Contents](#table-of-contents)
+  - [How it works](#how-it-works)
+  - [Environment Variables](#environment-variables)
+  - [Installation](#installation)
+    - [From Source](#from-source)
+    - [Using Docker](#using-docker)
+  - [How to run](#how-to-run)
+  - [API Usage](#api-usage)
+    - [GET Requests](#get-requests)
+    - [POST Requests](#post-requests)
 
 ## How it works
 
-- It uses a blockchain to keep list of the nodes, file changes. Suppose if a block found which tells that a new node have joined into the network, then the block is shared with the each nodes and then the node which saw the block keep the final list into their local database.
-- Each node verify the block information when they encounter, they verify the block hash, previous block hash, the signature of the node which created the block (Using EdDSA). And when everything looks Ok then it start following the operation of it.
-- The system uses Webhook system to share files between nodes, The server tells random clients that it have a specific file, then the random clients start asking for the file information to the server, and this systems works continuously until all the nodes have the specific file.
-- The system download file in chunk by chunk manner, and verify each chunk using sha1 hash before appending it to the main file.
+- **Blockchain for State Management**: The service uses a private blockchain to maintain a distributed ledger of network nodes and file metadata. When a node joins or a file is added, a new block is created and propagated across the network. Each node independently validates and processes these blocks to maintain a consistent state.
+- **Cryptographic Verification**: To ensure integrity and authenticity, each node cryptographically verifies new blocks. This includes checking the block's hash, the previous block's hash, and the creator's digital signature using the EdDSA algorithm.
+- **Peer-to-Peer File Transfer Cycle**: File sharing is driven by a notification-based P2P cycle:
+  1.  A node with a file chunk (the _sender_) notifies a random set of peers that the chunk is available.
+  2.  A peer receiving the notification (the _downloader_) queues a task to download that chunk.
+  3.  The downloader requests the chunk from the sender.
+  4.  After downloading and verifying the chunk's SHA-1 hash, the downloader sends a confirmation back to the sender via a webhook.
+  5.  This confirmation signals the sender to notify the downloader about the _next_ available chunk, continuing the cycle until the entire file is transferred.
+- **Chunk-Based Downloads**: Files are transferred in 4MB chunks. Each chunk is verified with its SHA-1 hash upon receipt before being appended to the local file, ensuring data integrity throughout the transfer process.
 
-## Environments
+## Environment Variables
 
 | Name             | Description                                                                                                                                                                                  |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -17,37 +36,43 @@ This is the service which uses private blockchain to share files between nodes, 
 | `MACHINE_IP`     | It contains the environment which tells what is the IP Address of the current Machine (Must be accessible by the other nodes), default value is "127.0.0.1"                                  |
 | `AUTO_DETECT_IP` | If this is set to 1, then the program will automatically find IP Address and then set it as `MACHINE_IP`, **Please Note: This environment only works when the program is running in docker** |
 
-These environment variables should be set before starting the server. If you are on Windows then you need to add it under User Space, if you are in Unix based system then you need to set using `export`.
+These variables should be set in your environment before running the application. For example, on Linux or macOS:
+
+```bash
+export PORT=8001
+export MACHINE_IP=192.168.1.10
+```
 
 ## Installation
 
-### From Source Code
+### From Source
 
 1. Clone this repo
 
-```
+```bash
 git clone https://github.com/BiltuDas1/swiftserve-py
 ```
 
 2. Now install all the dependencies using pip
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
-3. [Now start the server](#how-to-run)
+3. [Start the server as described in the How to Run section.
+   ](#how-to-run)
 
-### From Docker
+### Using Docker
 
 1. Clone this repo
 
-```
+```bash
 git clone https://github.com/BiltuDas1/swiftserve-py
 ```
 
 2. Now build the docker image using
 
-```
+```bash
 docker buildx -t swiftserve:latest .
 ```
 
@@ -55,31 +80,35 @@ docker buildx -t swiftserve:latest .
 
 For starting the development server use
 
-```
+```bash
 python manage.py runserver 0.0.0.0:8000
 ```
 
 For starting the production server use
 
+```bash
+gunicorn swiftserve.wsgi:application --bind 0.0.0.0:8000
 ```
-gunicorn swiftserve.wsgi:application --bind <public_ip_address>:8000
-```
+
+> **Note**: Using `0.0.0.0` binds the server to all available network interfaces, which is standard for production and containerized environments.
 
 ## API Usage
 
+> **Note**: The links below point to the relevant implementation in the source code.
+
 ### GET Requests
 
-- [`/getHash?num=<block_number>`](./blockchain/views.py#L191) - This HTTP Endpoint allows to get the SHA256 hash of the specific block mentioned into the `<block_number>` parameter. If the parameter empty or the block doesn't exist then it returns empty string.
-- [`/topBlockNumber`](./blockchain/views.py#L206) - This HTTP Endpoint allows to get the top block number of the blockchain.
-- [`/totalBlocks`](./blockchain/views.py#L215) - This HTTP Endpoint allows to get the total number of blocks in the blockchain.
-- [`/key`](./blockchain/views.py#L241) - This HTTP Endpoint allows to get the public key of the current node.
-- [`/download?file=<name_of_the_file>`](./registry/views.py#L160) - This HTTP Endpoint allows to download the file from the registry.
+- [`/getHash?num=<block_number>`](./blockchain/views.py#L191) - Retrieves the SHA256 hash of a specific block by its block number. Returns an empty string if the block does not exist.
+- [`/topBlockNumber`](./blockchain/views.py#L206) - Returns the block number of the most recent block in the local blockchain.
+- [`/totalBlocks`](./blockchain/views.py#L215) - Returns the total number of blocks in the local blockchain.
+- [`/key`](./blockchain/views.py#L241) - Returns the Ed25519 public key of the current node in PEM format.
+- [`/download?file=<name_of_the_file>`](./registry/views.py#L160) - Downloads a specified file. Supports `Range` headers for resuming downloads.
 
 ### POST Requests
 
-- [`/addBlock`](./blockchain/views.py#L94) - This HTTP Endpoint allows to add a new block to the blockchain, we need to pass a bytes data with the HTTP header `{"Content-Type": "application/octet-stream"}`. This endpoint only supports the byte version of the [Block](./blockchain/chain/Block.py#L15) class, which can be done using [Block.to_bytes()](./blockchain/chain/Block.py#L140) method.
-- [`/getBlockDatas`](./blockchain/views.py#L224) - This HTTP Endpoint allows to get the list of block datas starts from the `num` block to the end of the blockchain. `num` refers to the starting block number, from where the data will be fetched.
-- [`/overwriteBlockchain`](./blockchain/views.py#L257) - This HTTP Endpoint allows to overwrite the blockchain with the new blockchain. It will only works when the target node blockchain contains only the genesis block.
-- [`/response`](./filefetcher/views.py#L94) - Receives download request of file(s) from other nodes.
-- [`/webhook`](./filefetcher/views.py#L135) - Webhook which process the information and let the client know when the file is available.
-- [`/upload`](./registry/views.py#L128) - Receives the file from the client and create a new block with the file information and send it to other nodes.
+- [`/addBlock`](./blockchain/views.py#L94) - Adds a new block to the blockchain. The request body must contain the serialized block data as `application/octet-stream`.
+- [`/getBlockDatas`](./blockchain/views.py#L224) - Retrieves a serialized stream of block data starting from a specified block number (`num` field in the POST body).
+- [`/overwriteBlockchain`](./blockchain/views.py#L257) - Replaces the local blockchain with the one provided in the request body. This is only permitted if the local chain contains just the genesis block, and is used for syncing new nodes.
+- [`/upload`](./registry/views.py#L128) - Handles multipart file uploads. After storing the file, it creates an `add_file` block and notifies other peers.
+- [`/response`](./filefetcher/views.py#L94) - Receives a notification from a peer that a specific file chunk is available for download. This triggers the local node to queue a download task for that chunk.
+- [`/webhook`](./filefetcher/views.py#L135) - Receives a confirmation from a peer that a chunk has been successfully downloaded. This acts as a signal for the sender to offer the next available chunk to the downloader.
